@@ -2,18 +2,13 @@
 
 #include "../runtime/lang_instructions.h"
 
+#include "./lang_parse_util.h"
+
 #include <stdio.h> // sscanf
 #include <string.h> // strlen
 
-int starts_with(const char* with, const char* text) {
-	for (int i = 0; with[i] != '\0'; i++) {
-		if(with[i] != text[i]) return 0;
-	}
-	return 1;
-}
-
 int lang_bytecode_parse_line(const char* line, byte_buffer* into) {
-	if(starts_with("; ", line)) return 1;
+	if(lang_starts_with("; ", line)) return 1;
 
 	double f;
 	int i;
@@ -25,7 +20,7 @@ int lang_bytecode_parse_line(const char* line, byte_buffer* into) {
 	if(sscanf(line, "jumpc %i",  &i) == 1) { bb_pushc(into, instr_jumpc);    bb_pushi32(into, i); return 1; }
 
 	for(int i = 0; i < lang_instruction_infos_count; i++) {
-		if(starts_with(lang_instruction_infos[i].name, line)) {
+		if(lang_starts_with(lang_instruction_infos[i].name, line)) {
 			bb_pushc(into, i);
 			return 1;
 		}
