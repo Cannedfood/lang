@@ -35,11 +35,12 @@ void _token_stream_string_nextToken(void* userdata, lang_token* token) {
 	#define TOKEN(NAME, TOKEN_TYPE) if(lang_starts_with(NAME, stream->current)) { token->type = (TOKEN_TYPE); token->length = strlen(NAME); }
 
 	// Brackets
-	TOKEN("(",  lang_token_open_brace) else
-	TOKEN(")",  lang_token_close_brace) else
-	TOKEN("[",  lang_token_open_bracket) else
-	TOKEN("]",  lang_token_close_bracket) else
+	TOKEN("(", lang_token_open_brace) else
+	TOKEN(")", lang_token_close_brace) else
+	TOKEN("[", lang_token_open_bracket) else
+	TOKEN("]", lang_token_close_bracket) else
 	// Operators
+	TOKEN(".",  lang_token_plus) else
 	TOKEN("=",  lang_token_plus) else
 	TOKEN("+",  lang_token_plus) else
 	TOKEN("+=", lang_token_plus_assign) else
@@ -51,6 +52,7 @@ void _token_stream_string_nextToken(void* userdata, lang_token* token) {
 	TOKEN("*=", lang_token_mul_assign) else
 	// Keywords
 	TOKEN("class", lang_token_class) else
+	TOKEN("var",   lang_token_var) else
 	// Special
 	TOKEN("\0", lang_token_end_of_file)
 	// Default

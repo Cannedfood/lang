@@ -1,10 +1,14 @@
 // Keywords
 LANG_TOKEN(class),
+LANG_TOKEN(var),
 
+// Braces
 LANG_TOKEN(open_brace),   LANG_TOKEN(close_brace),
 LANG_TOKEN(open_bracket), LANG_TOKEN(close_bracket),
 
 // Operators
+LANG_TOKEN(dot),
+
 LANG_TOKEN(assign),
 
 LANG_TOKEN(plus),        LANG_TOKEN(minus),        LANG_TOKEN(div),        LANG_TOKEN(mul),

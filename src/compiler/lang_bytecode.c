@@ -7,21 +7,21 @@
 #include <stdio.h> // sscanf
 #include <string.h> // strlen
 
-int lang_bytecode_parse_line(const char* line, byte_buffer* into) {
+int lang_bytecode_parse_line(const char* line, lang_buffer* into) {
 	if(lang_starts_with("; ", line)) return 1;
 
 	double f;
 	int i;
 
-	if(sscanf(line, "push %lf",  &f) == 1) { bb_pushc(into, instr_push_num); bb_pushf64(into, f); return 1; }
-	if(sscanf(line, "call %i",   &i) == 1) { bb_pushc(into, instr_call);     bb_pushc  (into, i); return 1; }
-	if(sscanf(line, "return %i", &i) == 1) { bb_pushc(into, instr_return);   bb_pushc  (into, i); return 1; }
-	if(sscanf(line, "jump %i",   &i) == 1) { bb_pushc(into, instr_jump);     bb_pushi32(into, i); return 1; }
-	if(sscanf(line, "jumpc %i",  &i) == 1) { bb_pushc(into, instr_jumpc);    bb_pushi32(into, i); return 1; }
+	if(sscanf(line, "push %lf",  &f) == 1) { lang_buffer_pushc(into, instr_push_num); lang_buffer_pushf64(into, f); return 1; }
+	if(sscanf(line, "call %i",   &i) == 1) { lang_buffer_pushc(into, instr_call);     lang_buffer_pushc  (into, i); return 1; }
+	if(sscanf(line, "return %i", &i) == 1) { lang_buffer_pushc(into, instr_return);   lang_buffer_pushc  (into, i); return 1; }
+	if(sscanf(line, "jump %i",   &i) == 1) { lang_buffer_pushc(into, instr_jump);     lang_buffer_pushi32(into, i); return 1; }
+	if(sscanf(line, "jumpc %i",  &i) == 1) { lang_buffer_pushc(into, instr_jumpc);    lang_buffer_pushi32(into, i); return 1; }
 
 	for(int i = 0; i < lang_instruction_infos_count; i++) {
 		if(lang_starts_with(lang_instruction_infos[i].name, line)) {
-			bb_pushc(into, i);
+			lang_buffer_pushc(into, i);
 			return 1;
 		}
 	}
@@ -45,7 +45,7 @@ static int _lang_instructions_size(const char* instructions, int n) {
 	return position;
 }
 
-int lang_bytecode_parse_file(const char* path, byte_buffer* into, lang_bytecode_errfn errorfn_or_null) {
+int lang_bytecode_parse_file(const char* path, lang_buffer* into, lang_bytecode_errfn errorfn_or_null) {
 	if(!errorfn_or_null) errorfn_or_null = _lang_bytecode_default_errfn;
 
 	int start = into->length;

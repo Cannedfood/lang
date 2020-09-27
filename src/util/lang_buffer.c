@@ -1,22 +1,22 @@
-#include "byte_buffer.h"
+#include "lang_buffer.h"
 
 #include <string.h>
 #include <malloc.h>
 
-byte_buffer bb_new() {
-	byte_buffer result;
+lang_buffer lang_buffer_new() {
+	lang_buffer result;
 	result.data = 0;
 	result.length = 0;
 	result.capacity = 0;
 	return result;
 }
-void bb_free(byte_buffer* buffer) {
+void lang_buffer_free(lang_buffer* buffer) {
 	buffer->length = 0;
 	buffer->capacity = 0;
 	free(buffer->data);
 }
 
-void bb_reserve(byte_buffer* buffer, size_t bytes) {
+void lang_buffer_reserve(lang_buffer* buffer, size_t bytes) {
 	if(buffer->capacity < buffer->length + bytes) {
 		if(buffer->capacity)
 			buffer->capacity *= 2;
@@ -27,8 +27,8 @@ void bb_reserve(byte_buffer* buffer, size_t bytes) {
 	}
 }
 
-void bb_append(byte_buffer* buffer,  void const* data, size_t bytes) {
-	bb_reserve(buffer, bytes);
+void lang_buffer_append(lang_buffer* buffer,  void const* data, size_t bytes) {
+	lang_buffer_reserve(buffer, bytes);
 	memcpy(buffer->data + buffer->length, data, bytes);
 	buffer->length += bytes;
 }
