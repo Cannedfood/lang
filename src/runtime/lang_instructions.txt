@@ -1,0 +1,13 @@
+//              ( name         ,push,pop,extra argument,xarg size), // Description                         | usage (in asm)
+LANG_INSTRUCTION( halt         ,   0,  0,          void,        0), // Stops program                       | halt
+LANG_INSTRUCTION( call         ,   0,  0,          char,        1), // Call callable                       | call <nargs>
+LANG_INSTRUCTION( return       ,   0,  0,          char,        1), // Return from function                | return <nreturns>
+LANG_INSTRUCTION( jump         ,   0,  0,       int32_t,        4), // A relative jump                     | jump  <bytes>
+LANG_INSTRUCTION( jumpc        ,   0,  1,       int32_t,        4), // A conditional jump, pops top value  | jumpc <bytes>
+LANG_INSTRUCTION( add          ,   1,  2,          void,        0), // Add: push(pop(top) + pop(top - 1))  | add
+LANG_INSTRUCTION( sub          ,   1,  2,          void,        0), // Sub: push(pop(top) - pop(top - 1))  | sub
+LANG_INSTRUCTION( div          ,   1,  2,          void,        0), // Div: push(pop(top) / pop(top - 1))  | div
+LANG_INSTRUCTION( mul          ,   1,  2,          void,        0), // Mul: push(pop(top) * pop(top - 1))  | mul
+LANG_INSTRUCTION( popn         ,   0, -1,          void,        0), // Pop stack n times                   | popn <popcount>
+LANG_INSTRUCTION( push_num     ,   1,  0,        double,        8), // Push number to top of stack         | push_num <double>
+LANG_INSTRUCTION( print_debug  ,   0,  1,          void,        0), // Print value at top of stack and pop | print_debug
