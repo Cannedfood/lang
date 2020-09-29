@@ -1,0 +1,16 @@
+class bird {
+	pub location;
+
+	constructor() {
+		.location = nest;
+	}
+
+	fly(destination) {
+		.location = destination;
+	}
+
+}
+
+var mybird = bird()
+
+mybird.fly "home"
