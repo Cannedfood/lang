@@ -3,18 +3,28 @@ LANG_TOKEN(class),
 LANG_TOKEN(var),
 
 // Braces
-LANG_TOKEN(open_brace),   LANG_TOKEN(close_brace),
-LANG_TOKEN(open_bracket), LANG_TOKEN(close_bracket),
+LANG_TOKEN(open_brace),  LANG_TOKEN(close_brace),
+LANG_TOKEN(open_square), LANG_TOKEN(close_square),
+LANG_TOKEN(open_curly),  LANG_TOKEN(close_curly),
 
 // Operators
 LANG_TOKEN(dot),
 
 LANG_TOKEN(assign),
 
+LANG_TOKEN(equals),     LANG_TOKEN(not_equals),
+LANG_TOKEN(less),       LANG_TOKEN(greater),
+LANG_TOKEN(less_equal), LANG_TOKEN(greater_equal),
+
 LANG_TOKEN(plus),        LANG_TOKEN(minus),        LANG_TOKEN(div),        LANG_TOKEN(mul),
 LANG_TOKEN(plus_assign), LANG_TOKEN(minus_assign), LANG_TOKEN(div_assign), LANG_TOKEN(mul_assign),
 
+LANG_TOKEN(quote),
+
+LANG_TOKEN(end_stmt),
+
 // Other
 LANG_TOKEN(name),
+LANG_TOKEN(number),
 LANG_TOKEN(break),
 LANG_TOKEN(end_of_file),

@@ -18,8 +18,10 @@ void lang_buffer_free(lang_buffer* buffer) {
 
 void lang_buffer_reserve(lang_buffer* buffer, size_t bytes) {
 	if(buffer->capacity < buffer->length + bytes) {
-		if(buffer->capacity)
-			buffer->capacity *= 2;
+		if(buffer->capacity) {
+			while(buffer->capacity < buffer->length + bytes)
+				buffer->capacity *= 2;
+		}
 		else
 			buffer->capacity = 256;
 

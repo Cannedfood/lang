@@ -14,25 +14,25 @@ struct lang_token {
 	lang_token_type type;
 	const char* file;
 	int line, character;
-	const char* token;
+	const char* text;
 	int length;
 };
 typedef struct lang_token lang_token;
 
 // Token Stream
-struct lang_token_stream {
+struct lang_tokenizer {
 	void* userdata;
 	void(*pfnNextToken)(void* userdata, lang_token* into);
 };
-typedef struct lang_token_stream lang_token_stream;
+typedef struct lang_tokenizer lang_tokenizer;
 
 // Token Stream String
-struct lang_token_stream_string {
-	lang_token_stream stream;
+struct lang_tokenizer_string {
+	lang_tokenizer stream;
 	const char* file;
 	int line;
 	const char* lineStart;
 	const char* current;
 };
-typedef struct lang_token_stream_string lang_token_stream_string;
-void lang_parser_init_token_stream_string(lang_token_stream_string* stream, const char* text, const char* filepath_or_null);
+typedef struct lang_tokenizer_string lang_tokenizer_string;
+void lang_tokenizer_string_init(lang_tokenizer_string* stream, const char* text, const char* filepath_or_null);
