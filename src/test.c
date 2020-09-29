@@ -5,9 +5,8 @@
 #include <string.h>
 
 #include "./util/lang_buffer.h"
-#include "./runtime/lang_statemachine.h"
-#include "./compiler/lang_bytecode.h"
 #include "./compiler/lang_tokens.h"
+#include "./compiler/lang_parser.h"
 
 lang_buffer readFile(const char* path) {
 	lang_buffer buf = lang_buffer_new();
@@ -22,24 +21,22 @@ lang_buffer readFile(const char* path) {
 	return buf;
 }
 
-void printTokens(const char* data, const char* filepath) {
-	lang_tokenizer_string tokenizer;
-	lang_tokenizer_string_init(&tokenizer, data, filepath);
+void parseFile(const char* filepath) {
+	lang_buffer fileContents = readFile(filepath);
 
-	lang_token token;
-	do {
-		tokenizer.stream.pfnNextToken(tokenizer.stream.userdata, &token);
-		printf("%s '%.*s'\n", lang_token_names[token.type], token.length, token.text);
-	} while(token.type != lang_token_end_of_file);
+	lang_tokenizer tokenizer;
+	lang_tokenizer_init(&tokenizer, fileContents.data, filepath);
+
+	lang_parser parser;
+	parser.pfnError = 0; // Default: stderr
+	lang_parser_parse(&parser, &tokenizer);
+
+	while(tokenizer.token.type != lang_token_end_of_file)
+		tokenizer.pfnNextToken(&tokenizer);
+
+	lang_buffer_free(&fileContents);
 }
 
 int main(int argc, const char** argv) {
-	const char* path = "./test.lang";
-
-	lang_buffer fileData = readFile(path);
-	lang_buffer_pushc(&fileData, '\0');
-
-	printTokens(fileData.data, path);
-
-	lang_buffer_free(&fileData);
+	parseFile("./test.lang");
 }

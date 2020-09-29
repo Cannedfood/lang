@@ -20,19 +20,11 @@ struct lang_token {
 typedef struct lang_token lang_token;
 
 // Token Stream
-struct lang_tokenizer {
-	void* userdata;
-	void(*pfnNextToken)(void* userdata, lang_token* into);
-};
 typedef struct lang_tokenizer lang_tokenizer;
+struct lang_tokenizer {
+	lang_token token;
 
-// Token Stream String
-struct lang_tokenizer_string {
-	lang_tokenizer stream;
-	const char* file;
-	int line;
-	const char* lineStart;
-	const char* current;
+	void(*pfnNextToken)(lang_tokenizer* tokenizer);
 };
-typedef struct lang_tokenizer_string lang_tokenizer_string;
-void lang_tokenizer_string_init(lang_tokenizer_string* stream, const char* text, const char* filepath_or_null);
+
+void lang_tokenizer_init(lang_tokenizer* stream, const char* text, const char* filepath_or_null);

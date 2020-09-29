@@ -1,28 +1,83 @@
 #include "lang_parser.h"
 
-#include <stdio.h> // printf
+#include <stdio.h> // vfprintf, stderr
 #include <stdlib.h> // exit
+#include <assert.h> // assert
 
 static inline
 lang_token _nextToken(lang_tokenizer* tokens) {
-	lang_token result;
-	tokens->pfnNextToken(tokens->userdata, &result);
-	return result;
+	tokens->pfnNextToken(tokens);
+	return tokens->token;
 }
 
-static inline
-void _parseBlock(lang_tokenizer* tokens) {
-	lang_token t = _nextToken(tokens);
-	switch (t.type) {
-	case lang_token_class: break;
-	case lang_token_name: break;
+static
+void _parseFunction(lang_parser* parser, lang_tokenizer* tokens) {
+	assert(tokens->token.type == lang_token_open_brace);
+
+	
+}
+
+static
+void _parseClass(lang_parser* parser, lang_tokenizer* tokens) {
+	assert(tokens->token.type == lang_token_class);
+
+	lang_token className = _nextToken(tokens);
+
+	printf("class %.*s {\n", className.length, className.text);
+
+	// TODO: parse class body
+	while(0) {
+		_nextToken(tokens);
+		switch(tokens->token.type) {
+		case lang_token_name:
+
+			break;
+		default:
+			parser->pfnError(
+				"%s:%i:%i: Class member or end, got %s: '%s'",
+				tokens->token.file, tokens->token.line, tokens->token.character,
+				lang_token_names[tokens->token.type],
+				tokens->token.text
+			);
+		}
+	}
+
+	printf("} // class %.*s\n", className.length, className.text);
+}
+
+static
+void _parseBlock(lang_parser* parser, lang_tokenizer* tokens) {
+	switch (tokens->token.type) {
+	case lang_token_class:
+		_parseClass(parser, tokens);
+	break;
+	case lang_token_name:
+
+	break;
 	default:
+		parser->pfnError(parser->userpointer,
+			"%s:%i:%i: Expected statement or declaration, got %s: '%s'",
+			tokens->token.file, tokens->token.line, tokens->token.character,
+			lang_token_names[tokens->token.type],
+			tokens->token.text
+		);
 		// TODO
-		printf("%s:%i:%i: Expected statement or declaration, got ", t.file, t.line, t.character);
 		exit(-1);
 	}
 }
 
-void lang_parser_parse(lang_tokenizer* tokens) {
-	_parseBlock(tokens);
+static
+void _defaultError(void* userpointer, const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
+}
+
+void lang_parser_parse(lang_parser* parser, lang_tokenizer* tokens) {
+	if(!parser->pfnError) parser->pfnError = &_defaultError;
+
+	_nextToken(tokens);
+
+	_parseBlock(parser, tokens);
 }

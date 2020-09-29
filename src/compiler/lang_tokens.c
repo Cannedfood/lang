@@ -3,6 +3,7 @@
 #include "./lang_parse_util.h"
 
 #include <string.h> // strlen
+#include <stdio.h> // TODO: remove (printf)
 
 const char* lang_token_names[] = {
 	#define LANG_TOKEN(NAME) #NAME
@@ -27,25 +28,35 @@ static inline int _is_name(int c) {
 }
 
 static
-void _tokenizer_string_nextToken(void* userdata, lang_token* token) {
-	lang_tokenizer_string* stream = userdata;
+void _nextToken(lang_tokenizer* userdata) {
+	lang_token* token = &userdata->token;
 
-	while(stream->current[0] != '\0' && stream->current[0] <= ' ') {
-		if(stream->current[0] == '\n') {
-			stream->lineStart = stream->current;
-			stream->line++;
+	token->text += token->length;
+	token->character += token->length;
+	token->length = -1;
+
+	{
+		const char* lineStart = token->text - token->character;
+		const char* nextStart = token->text;
+		while(nextStart[0] != '\0' && nextStart[0] <= ' ') {
+			if(
+				nextStart[0] == '\r' && nextStart[1] == '\n' || // Windows line ending
+				nextStart[0] == '\n')
+			{
+				if(nextStart[0] == '\r') nextStart++; // Skip \r of windows line ending
+
+				// TODO: handle windows line endings
+				lineStart = nextStart;
+				token->line++;
+			}
+			nextStart++;
 		}
-		stream->current++;
+		token->character = nextStart - lineStart;
+		token->text = nextStart;
 	}
 
-	token->line      = stream->line;
-	token->text      = stream->current;
-	token->file      = stream->file;
-	token->character = stream->lineStart - stream->current;
-
 	// The starts_with and strlen calls should be optimized away
-	#define TOKEN(NAME, TOKEN_TYPE) if(lang_starts_with(NAME, stream->current)) { token->type = (TOKEN_TYPE); token->length = strlen(NAME); }
-
+	#define TOKEN(NAME, TOKEN_TYPE) if(lang_starts_with(NAME, token->text)) { token->type = (TOKEN_TYPE); token->length = strlen(NAME); }
 	// Special
 	TOKEN("\"", lang_token_quote) else
 	TOKEN(";", lang_token_end_stmt) else
@@ -77,41 +88,49 @@ void _tokenizer_string_nextToken(void* userdata, lang_token* token) {
 	TOKEN("*=", lang_token_mul_assign) else
 	// Keywords
 	TOKEN("class", lang_token_class) else
-	TOKEN("var",   lang_token_var)
+	TOKEN("var",   lang_token_var) else
+	TOKEN("pub",   lang_token_pub) else
+	TOKEN("get",   lang_token_get) else
+	TOKEN("set",   lang_token_set)
+	#undef TOKEN
 	// Special
-	else if(stream->current[0] == '\0') {
+	else if(token->text[0] == '\0') {
 		token->type = lang_token_end_of_file;
 		token->length = 0;
 	}
 	// Number
-	else if(_is_numeric(stream->current[0])) {
+	else if(_is_numeric(token->text[0])) {
 		token->type = lang_token_number;
 		token->length = 1;
-		while(_is_numeric(stream->current[token->length]))
+		while(_is_numeric(token->text[token->length]))
 			token->length++;
 	}
-	else if(_is_name(stream->current[0])) {
+	else if(_is_name(token->text[0])) {
 		token->type = lang_token_name;
 		token->length = 1;
-		while(_is_name(stream->current[token->length]))
+		while(_is_name(token->text[token->length]))
 			token->length++;
 	}
 
-#undef TOKEN
-
-	stream->current += token->length;
+	printf(
+		"%s:%i:%i: %.*s -> %s\n",
+		token->file, token->line, token->character,
+		token->length, token->text,
+		lang_token_names[token->type]
+	);
 }
 
-void lang_tokenizer_string_init(
-	lang_tokenizer_string* stream,
+void lang_tokenizer_init(
+	lang_tokenizer* stream,
 	const char* text,
 	const char* filepath_or_null)
 {
-	stream->current = text;
-	stream->lineStart = text;
-	stream->line = 0;
-	stream->file = filepath_or_null;
+	stream->token.type      = lang_token_end_of_file;
+	stream->token.file      = filepath_or_null;
+	stream->token.line      = 1;
+	stream->token.character = 0;
+	stream->token.text      = text;
+	stream->token.length    = 0;
 
-	stream->stream.userdata     = stream;
-	stream->stream.pfnNextToken = _tokenizer_string_nextToken;
+	stream->pfnNextToken = &_nextToken;
 }
