@@ -3,6 +3,7 @@
 #include <stdio.h> // vfprintf, stderr
 #include <stdlib.h> // exit
 #include <assert.h> // assert
+#include <stdarg.h> // va_list, va_start, va_end
 
 static inline
 lang_token _nextToken(lang_tokenizer* tokens) {
