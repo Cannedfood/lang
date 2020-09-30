@@ -69,6 +69,7 @@ void _nextToken(lang_tokenizer* userdata) {
 	TOKEN("}", lang_token_close_curly) else
 	// Operators: Various
 	TOKEN(".",  lang_token_dot) else
+	TOKEN(",",  lang_token_comma) else
 	TOKEN("=",  lang_token_assign) else
 	// Operators: Comparison
 	TOKEN("==", lang_token_equals) else
@@ -112,12 +113,12 @@ void _nextToken(lang_tokenizer* userdata) {
 			token->length++;
 	}
 
-	printf(
-		"%s:%i:%i: %.*s -> %s\n",
-		token->file, token->line, token->character,
-		token->length, token->text,
-		lang_token_names[token->type]
-	);
+	// printf(
+	// 	"%s:%i:%i: %.*s -> %s\n",
+	// 	token->file, token->line, token->character,
+	// 	token->length, token->text,
+	// 	lang_token_names[token->type]
+	// );
 }
 
 void lang_tokenizer_init(

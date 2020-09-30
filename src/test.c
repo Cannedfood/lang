@@ -11,11 +11,12 @@
 lang_buffer readFile(const char* path) {
 	lang_buffer buf = lang_buffer_new();
 
-	FILE* file = fopen(path, "r");
+	FILE* file = fopen(path, "rb");
 	fseek(file, 0, SEEK_END);
 	lang_buffer_reserve(&buf, buf.length = ftell(file));
 	fseek(file, 0, SEEK_SET);
-	fread(buf.data, buf.length, 1, file);
+	int bytes_read = fread(buf.data, 1, buf.length, file);
+	assert(bytes_read == buf.length);
 	fclose(file);
 
 	return buf;
