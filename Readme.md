@@ -19,5 +19,8 @@ class Bird extends Animal
 		.location = destination
 
 var flock = [Bird(), Bird(), Bird()]
-
 ```
+
+# Ideas
+Modules:
+	- Resolution: Relative, Default module path, -Iarguments/
