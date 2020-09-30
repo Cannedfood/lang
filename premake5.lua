@@ -8,7 +8,11 @@ newoption {
 workspace 'lang'
 	configurations { 'debug', 'release' }
 	filter 'configurations:debug'
+		optimize 'Debug'
 		symbols 'On'
+	filter 'configurations:release'
+		optimize 'Speed'
+		flags 'LinkTimeOptimization'
 	filter {}
 
 	location(_OPTIONS.location)
