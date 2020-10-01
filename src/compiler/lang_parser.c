@@ -5,6 +5,8 @@
 #include <assert.h> // assert
 #include <stdarg.h> // va_list, va_start, va_end
 
+
+
 static inline
 lang_token _nextToken(lang_tokenizer* tokens) {
 	tokens->pfnNextToken(tokens);
@@ -18,41 +20,15 @@ void _parserError(const char* expected_message, lang_parser* parser, lang_token*
 		token->file, token->line, token->character,
 		expected_message,
 		lang_token_names[token->type],
-		token->text
+		token->length, token->text
 	);
 }
 
-static
-void _parseExpression(lang_parser* parser, lang_tokenizer* tokens) {
+static void _parseFunction(lang_parser* parser, lang_tokenizer* tokens);
+static void _parseClassDeclaration(lang_parser* parser, lang_tokenizer* tokens);
+static void _parseExpression(lang_parser* parser, lang_tokenizer* tokens);
+static void _parseStatement(lang_parser* parser, lang_tokenizer* tokens);
 
-}
-
-static
-void _parseStatement(lang_parser* parser, lang_tokenizer* tokens) {
-	if(tokens->token.type == lang_token_var) {
-		// Variable declaration
-		lang_token varName = _nextToken(tokens);
-
-		_nextToken(tokens);
-		if(tokens->token.type == lang_token_end_stmt) {
-			printf("declvar: %.*s\n", tokens->token.length, tokens->token.text);
-			return; // Just a declaration appearently
-		}
-		else if(tokens->token.type == lang_token_assign) {
-			printf("declvar: %.*s = \n", tokens->token.length, tokens->token.text);
-			_nextToken(tokens);
-			_parseExpression(parser, tokens);
-		}
-		else {
-			_parserError("Expected assignment or end of ", parser, &tokens->token);
-		}
-	}
-	else {
-
-	}
-}
-
-static
 void _parseFunction(lang_parser* parser, lang_tokenizer* tokens) {
 	assert(tokens->token.type == lang_token_open_brace);
 	printf("Function: (");
@@ -107,7 +83,7 @@ void _parseFunction(lang_parser* parser, lang_tokenizer* tokens) {
 }
 
 static
-void _parseClass(lang_parser* parser, lang_tokenizer* tokens) {
+void _parseClassDeclaration(lang_parser* parser, lang_tokenizer* tokens) {
 	assert(tokens->token.type == lang_token_class);
 
 	lang_token className = _nextToken(tokens);
@@ -152,14 +128,67 @@ void _parseClass(lang_parser* parser, lang_tokenizer* tokens) {
 }
 
 static
-void _parseBlock(lang_parser* parser, lang_tokenizer* tokens) {
-	switch (tokens->token.type) {
-	case lang_token_class:
-		_parseClass(parser, tokens);
-		break;
-	default:
+void _parseExpression(lang_parser* parser, lang_tokenizer* tokens) {
+
+}
+
+static
+void _parseStatement(lang_parser* parser, lang_tokenizer* tokens) {
+	if(tokens->token.type == lang_token_var) {
+		// Variable declaration
+		lang_token varName = _nextToken(tokens);
+
+		_nextToken(tokens);
+		if(tokens->token.type == lang_token_end_stmt) {
+			printf("declvar: %.*s\n", tokens->token.length, tokens->token.text);
+			return; // Just a declaration appearently
+		}
+		else if(tokens->token.type == lang_token_assign) {
+			printf("declvar: %.*s = \n", tokens->token.length, tokens->token.text);
+			printf("Assign to %.*s: \n", tokens->token.length, tokens->token.text);
+			_nextToken(tokens);
+			_parseExpression(parser, tokens);
+		}
+		else {
+			_parserError("Expected assignment or end of ", parser, &tokens->token);
+		}
+	}
+	else if(tokens->token.type == lang_token_name) {
+		lang_token varName = tokens->token;
+		switch (_nextToken(tokens).type) {
+			case lang_token_dot: {
+				lang_token indexName = _nextToken(tokens);
+				if(indexName.type == lang_token_name) {
+					printf("Index %.*s.%.*s\n", varName.length, varName.text, indexName.length, indexName.text);
+				}
+				else {
+					_parserError("Expected name after object indexing operator .", parser, &indexName);
+				}
+			} break;
+			case lang_token_assign:
+			break;
+			default:
+				break;
+		}
+	}
+	else if(tokens->token.type == lang_token_class) {
+		_parseClassDeclaration(parser, tokens);
+	}
+	else {
+		_parserError("Expected class declaration or variable declaration", parser, &tokens->token);
+	}
+}
+
+static
+void _parseBlockInner(lang_parser* parser, lang_tokenizer* tokens) {
+	while(tokens->token.type != lang_token_exit_block) {
+		if(tokens->token.type == lang_token_end_of_file) {
+			_parserError("Expected statement or end of block", parser, &tokens->token);
+			break;
+		}
+
 		_parseStatement(parser, tokens);
-		break;
+		_nextToken(tokens);
 	}
 }
 
@@ -176,5 +205,5 @@ void lang_parser_parse(lang_parser* parser, lang_tokenizer* tokens) {
 
 	_nextToken(tokens);
 
-	_parseBlock(parser, tokens);
+	_parseBlockInner(parser, tokens);
 }
