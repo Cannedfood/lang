@@ -4,9 +4,9 @@
 #include <assert.h>
 #include <string.h>
 
-#include <util/lang_buffer.h>
-#include <compiler/lang_tokens.h>
-#include <compiler/lang_parser.h>
+#include <lang/util/lang_buffer.h>
+#include <lang/compiler/lang_tokens.h>
+#include <lang/compiler/lang_parser.h>
 
 lang_buffer readFile(const char* path) {
 	lang_buffer buf = lang_buffer_new();
