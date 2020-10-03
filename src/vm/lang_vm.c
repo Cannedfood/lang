@@ -1,4 +1,4 @@
-#include "lang_statemachine.h"
+#include "lang_vm.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -6,7 +6,7 @@
 
 #define LANG_BITCAST(to_type, value) (*(to_type*)&value)
 
-void lang_state_pop(lang_statemachine* state) {
+void lang_state_pop(lang_vm* state) {
 	if(state->top < 1) {
 		state->options.onError(state->options.userdata, state, "Stack Underflow");
 		return;
@@ -14,11 +14,11 @@ void lang_state_pop(lang_statemachine* state) {
 
 	state->top--;
 }
-double lang_state_popnum(lang_statemachine* state) {
+double lang_state_popnum(lang_vm* state) {
 	lang_state_pop(state);
 	return LANG_BITCAST(double, state->stack[state->top + 1]);
 }
-void lang_state_pushnum(lang_statemachine* state, double num) {
+void lang_state_pushnum(lang_vm* state, double num) {
 	if(state->top > (sizeof(state->stack)/sizeof(state->stack[0])) - 1) {
 		state->options.onError(state->options.userdata, state, "Stack Overflow");
 		return;
@@ -27,16 +27,16 @@ void lang_state_pushnum(lang_statemachine* state, double num) {
 	state->top++;
 	state->stack[state->top] = LANG_BITCAST(uint64_t, num);
 }
-void lang_state_prepare_call(lang_statemachine* state, int kargs) {
+void lang_state_prepare_call(lang_vm* state, int kargs) {
 	// TODO
 	exit(-2);
 }
-void lang_state_prepare_return(lang_statemachine* state, int kresults) {
+void lang_state_prepare_return(lang_vm* state, int kresults) {
 	// TODO
 	exit(-2);
 }
 
-void lang_state_interpret(lang_statemachine* state, char const* instructions, int num_instructions) {
+void lang_state_interpret(lang_vm* state, char const* instructions, int num_instructions) {
 	char const* end = instructions + num_instructions;
 
 	#define instr(name) case instr_##name:
@@ -79,18 +79,18 @@ void lang_state_interpret(lang_statemachine* state, char const* instructions, in
 }
 
 
-static void _lang_default_onError(void* userdata, lang_statemachine* state, const char* message) {
+static void _lang_default_onError(void* userdata, lang_vm* state, const char* message) {
 	// TODO: stack trace
 	state->options.onPrint(state->options.userdata, state, 0, message);
 	exit(-1);
 }
 
-static void _lang_default_onPrint(void* userdata, lang_statemachine* state, int level, const char* message) {
+static void _lang_default_onPrint(void* userdata, lang_vm* state, int level, const char* message) {
 	printf("[lang](%i) %s\n", level, message);
 }
 
-lang_statemachine* lang_newstate(lang_options const* options) {
-	lang_statemachine* state = calloc(1, sizeof(lang_statemachine));
+lang_vm* lang_newstate(lang_options const* options) {
+	lang_vm* state = calloc(1, sizeof(lang_vm));
 
 	if(options) state->options = *options;
 
@@ -99,6 +99,6 @@ lang_statemachine* lang_newstate(lang_options const* options) {
 
 	return state;
 }
-void lang_freestate(lang_statemachine* state) {
+void lang_freestate(lang_vm* state) {
 	free(state);
 }

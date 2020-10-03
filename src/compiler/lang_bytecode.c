@@ -1,6 +1,6 @@
 #include "lang_bytecode.h"
 
-#include "../runtime/lang_instructions.h"
+#include "../vm/lang_instructions.h"
 
 #include "./lang_parse_util.h"
 

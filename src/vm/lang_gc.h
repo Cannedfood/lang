@@ -1,5 +1,5 @@
 #pragma once
 
-#include "lang_statemachine.h"
+#include "lang_vm.h"
 
-void lang_gc(lang_statemachine* state);
+void lang_gc(lang_vm* state);
