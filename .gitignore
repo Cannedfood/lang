@@ -9,3 +9,6 @@
 /*.vcxproj
 /*.vcxproj.filters
 /*.vcxproj.user
+
+/compile_commands.*
+/.clangd
