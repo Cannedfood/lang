@@ -13,6 +13,7 @@ workspace 'lang'
 	filter 'configurations:release'
 		optimize 'Speed'
 		flags 'LinkTimeOptimization'
+		defines 'NDEBUG'
 	filter {}
 
 	location(_OPTIONS.location)
