@@ -18,7 +18,24 @@ workspace 'lang'
 	location(_OPTIONS.location)
 
 	project 'lang'
-		kind 'ConsoleApp'
+		kind 'SharedLib'
 		language 'C'
 		defines 'LANG_DEBUG'
-		files '**'
+		files 'src/**'
+
+	project 'cli'
+		kind    'ConsoleApp'
+		language 'C'
+		files   'extra/cli/**'
+		defines 'LANG_DEBUG'
+		links   'lang' includedirs 'src'
+
+	project 'test'
+		kind     'ConsoleApp'
+
+		language 'C++'
+			cppdialect 'C++17'
+		defines  'LANG_DEBUG'
+		files    'test/**'
+
+		links    'lang' includedirs 'src'
