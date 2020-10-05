@@ -6,6 +6,7 @@
 
 #define LANG_BITCAST(to_type, value) (*(to_type*)&value)
 
+inline
 void lang_state_pop(lang_vm* state) {
 	if(state->top < 1) {
 		state->options.onError(state->options.userdata, state, "Stack Underflow");
@@ -14,6 +15,7 @@ void lang_state_pop(lang_vm* state) {
 
 	state->top--;
 }
+inline
 double lang_state_popnum(lang_vm* state) {
 	lang_state_pop(state);
 	return LANG_BITCAST(double, state->stack[state->top + 1]);

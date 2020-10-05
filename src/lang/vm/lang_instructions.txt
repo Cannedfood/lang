@@ -11,3 +11,4 @@ LANG_INSTRUCTION( mul          ,   1,  2,          void,        0), // Mul: push
 LANG_INSTRUCTION( popn         ,   0, -1,          void,        0), // Pop stack n times                   | popn <popcount>
 LANG_INSTRUCTION( push_num     ,   1,  0,        double,        8), // Push number to top of stack         | push_num <double>
 LANG_INSTRUCTION( print_debug  ,   0,  1,          void,        0), // Print value at top of stack and pop | print_debug
+LANG_INSTRUCTION( new_class    ,   1,  0,          void,        0), // Allocates a new class               | new_class

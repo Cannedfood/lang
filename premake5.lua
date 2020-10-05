@@ -24,7 +24,7 @@ workspace 'lang'
 		defines 'LANG_DEBUG'
 		files 'src/**'
 
-	project 'cli'
+	project 'lang-cli'
 		kind    'ConsoleApp'
 		language 'C'
 		files   'extra/cli/**'
