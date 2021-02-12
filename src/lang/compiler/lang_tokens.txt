@@ -27,11 +27,13 @@ LANG_TOKEN(less_equal), LANG_TOKEN(greater_equal),
 LANG_TOKEN(plus),        LANG_TOKEN(minus),        LANG_TOKEN(div),        LANG_TOKEN(mul),
 LANG_TOKEN(plus_assign), LANG_TOKEN(minus_assign), LANG_TOKEN(div_assign), LANG_TOKEN(mul_assign),
 
-LANG_TOKEN(quote),
+LANG_TOKEN(string_literal),
 
 LANG_TOKEN(end_stmt),
 
 // Other
+LANG_TOKEN(line_comment),
+LANG_TOKEN(block_comment),
 LANG_TOKEN(name),
 LANG_TOKEN(number),
 LANG_TOKEN(break),
