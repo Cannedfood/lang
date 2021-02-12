@@ -13,3 +13,5 @@
 #define LANG_BYTECODE_API       LANG_API
 #define LANG_UTIL_BUFFER_API    LANG_API
 #define LANG_VM_API             LANG_API
+#define LANG_AST_API            LANG_API
+#define LANG_AST_API_DECL       LANG_API_DECL

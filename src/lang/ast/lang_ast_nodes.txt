@@ -1,0 +1,10 @@
+LANG_AST_NODE(root,)
+
+LANG_AST_NODE(class,
+	lang_token name;
+)
+
+LANG_AST_NODE(assignment,
+	lang_ast_node* left;
+	lang_ast_node* right;
+)
