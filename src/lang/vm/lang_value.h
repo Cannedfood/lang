@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../config.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
@@ -15,18 +17,18 @@ enum lang_value_masks {
 	lang_value_max_object = lang_value_mask_fraction >> 8,
 };
 
-static inline
+LANG_VM_API inline
 int lang_is_object(uint64_t v) {
 	return (v & lang_value_mask_object) == lang_value_mask_object;
 }
 
-static inline
+LANG_VM_API inline
 uint64_t lang_object2val(uint64_t objectIndex) {
 	assert(objectIndex <= lang_value_max_object && "Can't encode values this big");
 	return lang_value_mask_object | objectIndex;
 }
 
-static inline
+LANG_VM_API inline
 uint64_t lang_val2object(uint64_t value) {
 	assert(lang_is_object(value)&&"That's not an object");
 	return value & lang_value_mask_fraction;

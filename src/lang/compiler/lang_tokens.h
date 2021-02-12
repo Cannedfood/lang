@@ -1,23 +1,18 @@
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef __cplusplus
-	#define LANG_DEFAULT(VALUE) = VALUE
-#else
-	#define LANG_DEFAULT(VALUE)
-#endif
+#include "../config.h"
 
 // Token
 enum lang_token_type {
 	#define LANG_TOKEN(NAME) lang_token_##NAME
 	#include "./lang_tokens.txt"
 	#undef LANG_TOKEN
+
+	lang_num_token_types
 };
 typedef enum lang_token_type lang_token_type;
 
+LANG_TOKENIZER_API
 extern const char* lang_token_names[];
 
 struct lang_token {
@@ -45,13 +40,8 @@ struct lang_tokenizer {
 	#endif
 };
 
+LANG_TOKENIZER_API
 void lang_tokenizer_init(
 	lang_tokenizer* stream,
 	const char* text,
 	const char* file_name_or_null  LANG_DEFAULT(nullptr));
-
-#undef LANG_DEFAULT
-
-#ifdef __cplusplus
-} // extern "C"
-#endif

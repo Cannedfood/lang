@@ -7,6 +7,7 @@
 #include <stdio.h> // sscanf
 #include <string.h> // strlen
 
+LANG_BYTECODE_API
 int lang_bytecode_parse_line(const char* line, lang_buffer* into) {
 	if(lang_starts_with("; ", line)) return 1;
 
@@ -19,7 +20,7 @@ int lang_bytecode_parse_line(const char* line, lang_buffer* into) {
 	if(sscanf(line, "jump %i",   &i) == 1) { lang_buffer_pushc(into, instr_jump);     lang_buffer_pushi32(into, i); return 1; }
 	if(sscanf(line, "jumpc %i",  &i) == 1) { lang_buffer_pushc(into, instr_jumpc);    lang_buffer_pushi32(into, i); return 1; }
 
-	for(int i = 0; i < lang_instruction_infos_count; i++) {
+	for(int i = 0; i < lang_num_instructions; i++) {
 		if(lang_starts_with(lang_instruction_infos[i].name, line)) {
 			lang_buffer_pushc(into, i);
 			return 1;
@@ -41,6 +42,7 @@ static int _lang_instructions_size(const char* instructions, int n) {
 	return position;
 }
 
+LANG_BYTECODE_API
 int lang_bytecode_convert_jumps_to_bytes(const char* bytecode, int length) {
 	// Fix jump locations
 	// puts("Relink");
@@ -73,8 +75,10 @@ static void _lang_bytecode_default_errfn(void* userptr, const char* file, int li
 	printf("%s:%i: \"%s\" | %s\n", file, lineNumber, line, message);
 }
 
-int lang_bytecode_parse_file(const char* path, lang_buffer* into, lang_bytecode_errfn errorfn_or_null, void* errfn_userptr) {
-	if(!errorfn_or_null) errorfn_or_null = _lang_bytecode_default_errfn;
+LANG_BYTECODE_API
+int lang_bytecode_parse_file(const char* path, lang_buffer* into, lang_bytecode_errfn errorfn_or_null, void* errfn_userptr_or_null) {
+	lang_bytecode_errfn pfnError = _lang_bytecode_default_errfn;
+	if(errorfn_or_null) pfnError = errorfn_or_null;
 
 	int start = into->length;
 
@@ -95,7 +99,7 @@ int lang_bytecode_parse_file(const char* path, lang_buffer* into, lang_bytecode_
 		if(!lang_bytecode_parse_line(line, into)) {
 			hasError = 1;
 			line[strlen(line) - 1] = '\0'; // Remove '\n'
-			errorfn_or_null(errfn_userptr, path, lineCounter, line, "Unknown instruction name");
+			pfnError(errfn_userptr_or_null, path, lineCounter, line, "Unknown instruction name");
 		}
 	}
 

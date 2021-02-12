@@ -7,4 +7,3 @@ lang_instruction_info lang_instruction_infos[] = {
 	#include "lang_instructions.txt"
 	#undef LANG_INSTRUCTION
 };
-int                   lang_instruction_infos_count = sizeof(lang_instruction_infos) / sizeof(lang_instruction_infos[0]);

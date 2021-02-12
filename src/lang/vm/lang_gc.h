@@ -2,4 +2,4 @@
 
 #include "lang_vm.h"
 
-void lang_gc(lang_vm* state);
+LANG_VM_API void lang_gc(lang_vm* state);

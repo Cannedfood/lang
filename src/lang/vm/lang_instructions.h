@@ -4,6 +4,8 @@ enum lang_instruction {
 	#define LANG_INSTRUCTION(name, push, pop, extra_argtype, extra_argtype_size) instr_##name
 	#include "lang_instructions.txt"
 	#undef LANG_INSTRUCTION
+
+	lang_num_instructions
 };
 
 struct lang_instruction_info {
@@ -15,4 +17,3 @@ struct lang_instruction_info {
 typedef struct lang_instruction_info lang_instruction_info;
 
 extern lang_instruction_info lang_instruction_infos[];
-extern int                   lang_instruction_infos_count;

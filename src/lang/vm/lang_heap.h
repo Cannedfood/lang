@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../config.h"
+
 #include <stdint.h>
 
 enum lang_heap_object_type {
@@ -49,5 +51,5 @@ struct lang_heap {
 	int                numObjects;
 };
 
-uint64_t lang_heap_alloc();
-void     lang_heap_free(uint64_t);
+LANG_VM_API uint64_t lang_heap_alloc();
+LANG_VM_API void     lang_heap_free(uint64_t);

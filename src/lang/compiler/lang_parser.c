@@ -5,19 +5,31 @@
 #include <assert.h> // assert
 #include <stdarg.h> // va_list, va_start, va_end
 
-
+static inline
+int _lang_is_comment(lang_token const* token) {
+	return
+		token->type == lang_token_line_comment ||
+		token->type == lang_token_block_comment;
+}
 
 static inline
-lang_token _lang_next_token(lang_tokenizer* tokens) {
+lang_token _lang_next_token(lang_parser* parser, lang_tokenizer* tokens) {
 	tokens->pfnNextToken(tokens);
+	while(_lang_is_comment(&tokens->token)) {
+		parser->pfnComment(parser->userpointer, &tokens->token);
+		tokens->pfnNextToken(tokens);
+	}
 	return tokens->token;
 }
 
 static inline
 void _lang_parser_error(const char* expected_message, lang_parser* parser, lang_token* token) {
+	char buf[64];
+	sprintf(buf, "%s:%i:%i:", token->file, token->line+1, token->character+1);
+
 	parser->pfnError(parser->userpointer,
-		"%s:%i:%i: %s, got %s: '%.*s'\n",
-		token->file, token->line, token->character,
+		"%-20s %s, got %s: '%.*s'\n",
+		buf,
 		expected_message,
 		lang_token_names[token->type],
 		token->length, token->text
@@ -35,11 +47,11 @@ void _lang_parse_function(lang_parser* parser, lang_tokenizer* tokens) {
 
 	// Argument list
 	while(1) {
-		_lang_next_token(tokens);
+		_lang_next_token(parser, tokens);
 		if(tokens->token.type == lang_token_name) {
 			printf("%.*s,", tokens->token.length, tokens->token.text);
 
-			_lang_next_token(tokens);
+			_lang_next_token(parser, tokens);
 			if(tokens->token.type == lang_token_close_brace) {
 				break; // End of argument list
 			}
@@ -61,7 +73,7 @@ void _lang_parse_function(lang_parser* parser, lang_tokenizer* tokens) {
 		}
 	}
 
-	if(_lang_next_token(tokens).type != lang_token_open_curly) {
+	if(_lang_next_token(parser, tokens).type != lang_token_open_curly) {
 		_lang_parser_error("Expected opening curly brace '{' after function signature", parser, &tokens->token);
 	}
 
@@ -70,7 +82,7 @@ void _lang_parse_function(lang_parser* parser, lang_tokenizer* tokens) {
 	// Function body
 
 	while(1) {
-		_lang_next_token(tokens);
+		_lang_next_token(parser, tokens);
 		if(tokens->token.type == lang_token_close_curly) {
 			break; // End of function body
 		}
@@ -86,21 +98,21 @@ static
 void _lang_parse_class_declaration(lang_parser* parser, lang_tokenizer* tokens) {
 	assert(tokens->token.type == lang_token_class);
 
-	lang_token className = _lang_next_token(tokens);
+	lang_token className = _lang_next_token(parser, tokens);
 
 	printf("class %.*s {\n", className.length, className.text);
 
 	// _nextToken(lang_tokenizer *tokens)
-	if(_lang_next_token(tokens).type != lang_token_open_curly) {
+	if(_lang_next_token(parser, tokens).type != lang_token_open_curly) {
 		_lang_parser_error("Expected opening curly brace { at start of class", parser, &tokens->token);
 	}
 
 	// TODO: parse class body
 	while(1) {
-		lang_token memberToken = _lang_next_token(tokens);
+		lang_token memberToken = _lang_next_token(parser, tokens);
 		switch(memberToken.type) {
 		case lang_token_name: {
-			lang_token thing = _lang_next_token(tokens);
+			lang_token thing = _lang_next_token(parser, tokens);
 			if(thing.type == lang_token_end_stmt) {
 				printf("memvar: %.*s\n", memberToken.length, memberToken.text);
 			}
@@ -131,7 +143,7 @@ static
 void _lang_parse_expression(lang_parser* parser, lang_tokenizer* tokens) {
 	if(tokens->token.type == lang_token_open_brace) {
 		printf("Start subexpression:\n");
-		_lang_next_token(tokens);
+		_lang_next_token(parser, tokens);
 		if(tokens->token.type == lang_token_close_brace) {
 			_lang_parser_error("Expected subexpression, but got (), write an expression in the braces to remove this error", parser, &tokens->token);
 		}
@@ -149,9 +161,9 @@ static
 void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
 	if(tokens->token.type == lang_token_var) {
 		// Variable declaration
-		lang_token varName = _lang_next_token(tokens);
+		lang_token varName = _lang_next_token(parser, tokens);
 
-		_lang_next_token(tokens);
+		_lang_next_token(parser, tokens);
 		if(tokens->token.type == lang_token_end_stmt) {
 			printf("declvar: %.*s\n", tokens->token.length, tokens->token.text);
 			return; // Just a declaration appearently
@@ -159,7 +171,7 @@ void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
 		else if(tokens->token.type == lang_token_assign) {
 			printf("declvar: %.*s = \n", tokens->token.length, tokens->token.text);
 			printf("Assign to %.*s: \n", tokens->token.length, tokens->token.text);
-			_lang_next_token(tokens);
+			_lang_next_token(parser, tokens);
 			_lang_parse_expression(parser, tokens);
 		}
 		else {
@@ -170,14 +182,14 @@ void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
 			_lang_parser_error("Expected end of statement ';'", parser, &tokens->token);
 		}
 		else {
-			_lang_next_token(tokens);
+			_lang_next_token(parser, tokens);
 		}
 	}
 	else if(tokens->token.type == lang_token_name) {
 		lang_token varName = tokens->token;
-		switch (_lang_next_token(tokens).type) {
+		switch (_lang_next_token(parser, tokens).type) {
 			case lang_token_dot: {
-				lang_token indexName = _lang_next_token(tokens);
+				lang_token indexName = _lang_next_token(parser, tokens);
 				if(indexName.type == lang_token_name) {
 					printf("Index %.*s.%.*s\n", varName.length, varName.text, indexName.length, indexName.text);
 				}
@@ -208,7 +220,7 @@ void _lang_parse_block_inner(lang_parser* parser, lang_tokenizer* tokens) {
 		}
 
 		_lang_parse_statement(parser, tokens);
-		_lang_next_token(tokens);
+		_lang_next_token(parser, tokens);
 	}
 }
 
@@ -223,6 +235,6 @@ void _lang_default_error_fn(void* userpointer, const char* fmt, ...) {
 void lang_parser_parse(lang_parser* parser, lang_tokenizer* tokens) {
 	if(!parser->pfnError) parser->pfnError = &_lang_default_error_fn;
 
-	_lang_next_token(tokens);
+	_lang_next_token(parser, tokens);
 	_lang_parse_block_inner(parser, tokens);
 }

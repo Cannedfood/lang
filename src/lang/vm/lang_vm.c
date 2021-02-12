@@ -6,7 +6,7 @@
 
 #define LANG_BITCAST(to_type, value) (*(to_type*)&value)
 
-inline
+LANG_VM_API inline
 void lang_state_pop(lang_vm* state) {
 	if(state->top < 1) {
 		state->options.onError(state->options.userdata, state, "Stack Underflow");
@@ -15,11 +15,12 @@ void lang_state_pop(lang_vm* state) {
 
 	state->top--;
 }
-inline
+LANG_VM_API inline
 double lang_state_popnum(lang_vm* state) {
 	lang_state_pop(state);
 	return LANG_BITCAST(double, state->stack[state->top + 1]);
 }
+LANG_VM_API
 void lang_state_pushnum(lang_vm* state, double num) {
 	if(state->top > (sizeof(state->stack)/sizeof(state->stack[0])) - 1) {
 		state->options.onError(state->options.userdata, state, "Stack Overflow");
@@ -29,15 +30,18 @@ void lang_state_pushnum(lang_vm* state, double num) {
 	state->top++;
 	state->stack[state->top] = LANG_BITCAST(uint64_t, num);
 }
+LANG_VM_API
 void lang_state_prepare_call(lang_vm* state, int kargs) {
 	// TODO
 	exit(-2);
 }
+LANG_VM_API
 void lang_state_prepare_return(lang_vm* state, int kresults) {
 	// TODO
 	exit(-2);
 }
 
+LANG_VM_API
 void lang_state_interpret(lang_vm* state, char const* instructions, int num_instructions) {
 	char const* end = instructions + num_instructions;
 
@@ -91,6 +95,7 @@ static void _lang_default_onPrint(void* userdata, lang_vm* state, int level, con
 	printf("[lang](%i) %s\n", level, message);
 }
 
+LANG_VM_API
 lang_vm* lang_newstate(lang_options const* options) {
 	lang_vm* state = calloc(1, sizeof(lang_vm));
 
@@ -101,6 +106,8 @@ lang_vm* lang_newstate(lang_options const* options) {
 
 	return state;
 }
+
+LANG_VM_API
 void lang_freestate(lang_vm* state) {
 	free(state);
 }

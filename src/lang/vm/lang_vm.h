@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../config.h"
+
 #include <stdint.h>
 
 #include "lang_instructions.h"
@@ -25,13 +27,13 @@ struct lang_vm {
 	lang_options options;
 };
 
-void   lang_state_pop(lang_vm* state);
-double lang_state_popnum(lang_vm* state);
-void   lang_state_pushnum(lang_vm* state, double num);
-void   lang_state_prepare_call(lang_vm* state, int kargs);
-void   lang_state_prepare_return(lang_vm* state, int kresults);
+LANG_VM_API void   lang_state_pop(lang_vm* state);
+LANG_VM_API double lang_state_popnum(lang_vm* state);
+LANG_VM_API void   lang_state_pushnum(lang_vm* state, double num);
+LANG_VM_API void   lang_state_prepare_call(lang_vm* state, int kargs);
+LANG_VM_API void   lang_state_prepare_return(lang_vm* state, int kresults);
 
-void lang_state_interpret(lang_vm* state, char const* instructions, int num_instructions);
+LANG_VM_API void lang_state_interpret(lang_vm* state, char const* instructions, int num_instructions);
 
-lang_vm* lang_newstate(lang_options const* options);
-void lang_freestate(lang_vm* state);
+LANG_VM_API lang_vm* lang_newstate(lang_options const* options);
+LANG_VM_API void     lang_freestate(lang_vm* state);

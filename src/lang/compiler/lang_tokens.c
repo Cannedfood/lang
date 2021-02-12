@@ -5,6 +5,7 @@
 #include <string.h> // strlen
 #include <stdio.h> // TODO: remove (printf)
 
+LANG_TOKENIZER_API
 const char* lang_token_names[] = {
 	#define LANG_TOKEN(NAME) #NAME
 	#include "./lang_tokens.txt"
@@ -213,6 +214,7 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	// );
 }
 
+LANG_TOKENIZER_API
 void lang_tokenizer_init(
 	lang_tokenizer* stream,
 	const char* text,
@@ -220,7 +222,7 @@ void lang_tokenizer_init(
 {
 	stream->token.type      = lang_token_end_of_file;
 	stream->token.file      = file_name_or_null;
-	stream->token.line      = 1;
+	stream->token.line      = 0;
 	stream->token.character = 0;
 	stream->token.text      = text;
 	stream->token.length    = 0;
