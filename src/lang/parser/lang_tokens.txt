@@ -1,6 +1,6 @@
 // Keywords
 LANG_TOKEN(class),
-LANG_TOKEN(var),
+LANG_TOKEN(def),
 LANG_TOKEN(new),
 LANG_TOKEN(pub),
 LANG_TOKEN(get),

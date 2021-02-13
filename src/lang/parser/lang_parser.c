@@ -281,7 +281,7 @@ void _lang_parse_variable_declaration(lang_parser* parser, lang_tokenizer* token
 
 static
 void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
-	if(tokens->current.type == lang_token_var) {
+	if(tokens->current.type == lang_token_def) {
 		printf("\n\t");
 		_lang_parse_variable_declaration(parser, tokens);
 		printf(";\n");

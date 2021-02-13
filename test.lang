@@ -6,7 +6,7 @@ class bird {
 	}
 }
 
-var mybird = bird();
+def mybird = bird();
 
 mybird.weight = 32;
 

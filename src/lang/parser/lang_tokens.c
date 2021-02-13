@@ -6,7 +6,7 @@
 #include <stdio.h> // TODO: remove (printf)
 
 LANG_TOKENIZER_API
-const char* lang_token_names[] = {
+const char* lang_token_names[lang_num_token_types] = {
 	#define LANG_TOKEN(NAME) #NAME
 	#include "./lang_tokens.txt"
 	#undef LANG_TOKEN
@@ -178,7 +178,7 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	else TOKEN("*=", lang_token_mul_assign)
 	// Keywords
 	else TOKEN("class", lang_token_class)
-	else TOKEN("var",   lang_token_var)
+	else TOKEN("def",   lang_token_def)
 	else TOKEN("pub",   lang_token_pub)
 	else TOKEN("get",   lang_token_get)
 	else TOKEN("set",   lang_token_set)
