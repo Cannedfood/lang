@@ -19,6 +19,7 @@ LANG_TOKEN(dot),
 LANG_TOKEN(assign),
 
 LANG_TOKEN(comma),
+LANG_TOKEN(colon),
 
 LANG_TOKEN(equals),     LANG_TOKEN(not_equals),
 LANG_TOKEN(less),       LANG_TOKEN(greater),

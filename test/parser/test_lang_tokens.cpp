@@ -1,8 +1,8 @@
-#include "catch.hpp"
+#include "../catch.hpp"
 
 
 #include <string_view>
-#include <lang/compiler/lang_tokens.h>
+#include <lang/parser/lang_tokens.h>
 
 TEST_CASE("tokenizer", "[compiler][parser][tokens]") {
 	lang_tokenizer tokenizer;

@@ -12,8 +12,8 @@ enum lang_token_type {
 };
 typedef enum lang_token_type lang_token_type;
 
-LANG_TOKENIZER_API
-extern const char* lang_token_names[];
+LANG_TOKENIZER_API_DECL
+const char* lang_token_names[];
 
 struct lang_token {
 	lang_token_type type;

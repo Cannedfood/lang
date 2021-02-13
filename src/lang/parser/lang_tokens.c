@@ -158,6 +158,7 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	// Operators: Various
 	else TOKEN(".",  lang_token_dot)
 	else TOKEN(",",  lang_token_comma)
+	else TOKEN(":",  lang_token_colon)
 	else TOKEN("=",  lang_token_assign)
 	// Operators: Comparison
 	else TOKEN("==", lang_token_equals)

@@ -1,13 +1,14 @@
+/*
 class bird {
-	constructor() {
-		this.location = nest;
-	}
+	constructor() {}
 
 	fly(destination) {
 		this.location = destination;
 	}
 }
+*/
+var mybird = bird();
 
-var mybird = bird()
+mybird.weight = 32;
 
-mybird.fly "home"
+mybird.fly("my birds's " + "home");
