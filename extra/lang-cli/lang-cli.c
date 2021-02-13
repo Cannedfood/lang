@@ -8,6 +8,8 @@
 #include <lang/parser/lang_tokens.h>
 #include <lang/parser/lang_parser.h>
 
+#include "print-parser.h"
+
 lang_buffer readFile(const char* path) {
 	lang_buffer buf = lang_buffer_new();
 
@@ -29,8 +31,6 @@ lang_buffer readFile(const char* path) {
 void parseFile(const char* filepath) {
 	lang_buffer fileContents = readFile(filepath);
 
-	lang_tokenizer tokenizer;
-
 	// Print tokens
 	// puts("-- Tokens ------------------");
 	// lang_tokenizer_init(&tokenizer, fileContents.data, filepath);
@@ -51,10 +51,9 @@ void parseFile(const char* filepath) {
 	// } while(tokenizer.token.type != lang_token_end_of_file);
 
 	puts("-- Parsed ------------------");
-	lang_tokenizer_init(&tokenizer, fileContents.data, filepath);
-	lang_parser parser;
-	parser.pfnComment = 0;
-	parser.pfnError = 0; // Default: stderr
+	lang_tokenizer tokenizer = lang_tokenizer_create(fileContents.data, filepath);
+	lang_parser    parser    = print_parser_create();
+
 	lang_parser_parse(&parser, &tokenizer);
 
 	// Done

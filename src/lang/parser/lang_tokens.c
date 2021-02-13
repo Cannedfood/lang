@@ -217,17 +217,22 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 }
 
 LANG_TOKENIZER_API
-void lang_tokenizer_init(
-	lang_tokenizer* stream,
+lang_tokenizer lang_tokenizer_create(
 	const char* text,
 	const char* file_name_or_null)
 {
-	stream->current.type      = lang_token_end_of_file;
-	stream->current.file      = file_name_or_null;
-	stream->current.line      = 0;
-	stream->current.character = 0;
-	stream->current.text      = text;
-	stream->current.length    = 0;
+	lang_tokenizer stream;
 
-	stream->pfnNextToken = &_lang_tokenizer_next_token;
+	memset(&stream, 0, sizeof(stream));
+
+	stream.current.type      = lang_token_end_of_file;
+	stream.current.file      = file_name_or_null;
+	stream.current.line      = 0;
+	stream.current.character = 0;
+	stream.current.text      = text;
+	stream.current.length    = 0;
+
+	stream.pfnNextToken = &_lang_tokenizer_next_token;
+
+	return stream;
 }

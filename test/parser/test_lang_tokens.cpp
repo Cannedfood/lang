@@ -5,10 +5,8 @@
 #include <lang/parser/lang_tokens.h>
 
 TEST_CASE("tokenizer", "[compiler][parser][tokens]") {
-	lang_tokenizer tokenizer;
-
 	SECTION("line comments") {
-		lang_tokenizer_init(&tokenizer,
+		lang_tokenizer tokenizer = lang_tokenizer_create(
 			"// This is a comment\n"
 			"# As is this\n"
 		);
@@ -24,7 +22,7 @@ TEST_CASE("tokenizer", "[compiler][parser][tokens]") {
 	}
 
 	SECTION("block comments") {
-		lang_tokenizer_init(&tokenizer,
+		lang_tokenizer tokenizer = lang_tokenizer_create(
 			"/* Block comment 1 */\n"
 			"/* Block \n"
 			" comment 2 */\n"
@@ -54,7 +52,7 @@ TEST_CASE("tokenizer", "[compiler][parser][tokens]") {
 	}
 
 	SECTION("string literals") {
-		lang_tokenizer_init(&tokenizer,
+		lang_tokenizer tokenizer = lang_tokenizer_create(
 			R"("Hello" "\"")"
 		);
 

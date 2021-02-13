@@ -4,6 +4,7 @@
 #include <stdlib.h> // exit
 #include <assert.h> // assert
 #include <stdarg.h> // va_list, va_start, va_end
+#include <memory.h> // memset
 
 static inline
 void _lang_parser_error(const char* expected_message, lang_parser* parser, lang_token* token) {
@@ -307,6 +308,7 @@ void _lang_default_error_fn(void* userpointer, const char* fmt, ...) {
 	va_end(myargs);
 }
 
+LANG_PARSER_API
 void lang_parser_parse(lang_parser* parser, lang_tokenizer* tokens) {
 	if(!parser->pfnError) parser->pfnError = &_lang_default_error_fn;
 
@@ -315,4 +317,11 @@ void lang_parser_parse(lang_parser* parser, lang_tokenizer* tokens) {
 	while(tokens->current.type != lang_token_end_of_file) {
 		_lang_parse_statement(parser, tokens);
 	}
+}
+
+LANG_PARSER_API
+lang_parser lang_parser_empty() {
+	lang_parser result;
+	memset(&result, 0, sizeof(result));
+	return result;
 }

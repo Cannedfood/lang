@@ -41,7 +41,6 @@ struct lang_tokenizer {
 };
 
 LANG_TOKENIZER_API
-void lang_tokenizer_init(
-	lang_tokenizer* stream,
+lang_tokenizer lang_tokenizer_create(
 	const char* text,
 	const char* file_name_or_null  LANG_DEFAULT(nullptr));
