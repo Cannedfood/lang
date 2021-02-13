@@ -29,7 +29,7 @@ static inline int _lang_is_name(int c) {
 }
 
 static
-void _lang_tokenizer_skip_over_token(lang_token* token) {
+void _lang_tokenizer_skip_over_token(lang_token* token, const char* fileEnd) {
 	// Add number of lines in token to token->lines
 	int mayContainNewline =
 		token->type == lang_token_block_comment ||
@@ -43,7 +43,7 @@ void _lang_tokenizer_skip_over_token(lang_token* token) {
 		const char* lineStart = token->text - token->character;
 		const char* end = token->text + token->length;
 		const char* s = token->text;
-		while(s[0] && s < end) {
+		while(s < fileEnd && s < end) {
 			if(s[0] == '\n') {
 				token->line++;
 				lineStart = s + 1;
@@ -61,11 +61,11 @@ void _lang_tokenizer_skip_over_token(lang_token* token) {
 }
 
 static
-void _lang_tokenizer_skip_over_whitespace(lang_token* token) {
+void _lang_tokenizer_skip_over_whitespace(lang_token* token, const char* fileEnd) {
 	// Skip whitespace
 	const char* lineStart = token->text - token->character; // Used to calculate the column afterwards
 	const char* nextStart = token->text; // Start of next token
-	while(nextStart[0] != '\0' && nextStart[0] <= ' ') {
+	while(nextStart < fileEnd && nextStart[0] <= ' ') {
 		if(nextStart[0] == '\n') {
 			token->line++;
 			lineStart = nextStart + 1;
@@ -82,22 +82,28 @@ void _lang_tokenizer_skip_over_whitespace(lang_token* token) {
 }
 
 static
-const char* _lang_tokenizer_end_of_line(const char* text) {
-	while(text[0] && !lang_starts_with("\r\n", text) && !lang_starts_with("\n", text)) {
+const char* _lang_tokenizer_end_of_line(const char* text, const char* fileEnd) {
+	while(text < fileEnd && !lang_starts_with_e("\r\n", text, fileEnd) && !lang_starts_with_e("\n", text, fileEnd)) {
 		text++;
 	}
 	return text;
 }
 
 static
-const char* _lang_tokenizer_end_of_string_literal(const char* text) {
+const char* _lang_tokenizer_end_of_string_literal(const char* text, const char* fileEnd) {
 	const char quote = text[0];
 
 	text++;
-	while(text[0] && text[0] != quote) {
-		if(text[0] == '\\' && text[1] != '\0') {
+	for(;;) {
+		if(text >= fileEnd) {
+			return text;
+		}
+		else if(text[0] == quote) {
+			return text + 1;
+		}
+		else if(text[0] == '\\' && (text + 1) < fileEnd) {
 			// Skip escaped stuff
-			if(lang_starts_with(text, "\\\r\n"))
+			if(lang_starts_with_e("\\\r\n", text, fileEnd))
 				text += 3;
 			else
 				text += 2;
@@ -106,20 +112,14 @@ const char* _lang_tokenizer_end_of_string_literal(const char* text) {
 			text += 1;
 		}
 	}
-
-	if(text[0] == quote) {
-		text++;
-	}
-
-	return text;
 }
 
 static
-const char* _lang_tokenizer_end_of_block_comment(const char* text) {
-	// TODO: assert(lang_starts_with("/*", text));
+const char* _lang_tokenizer_end_of_block_comment(const char* text, const char* fileEnd) {
+	// TODO: assert(lang_starts_with_e("/*", text));
 	text += 2;
-	while(text[0]) {
-		if(lang_starts_with("*/", text)) {
+	while(text < fileEnd) {
+		if(lang_starts_with_e("*/", text, fileEnd)) {
 			return text + 2;
 		}
 		text++;
@@ -130,31 +130,38 @@ const char* _lang_tokenizer_end_of_block_comment(const char* text) {
 static
 void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	lang_token* token = &userdata->current;
+	const char* fileEnd = userdata->userdata;
 
-	_lang_tokenizer_skip_over_token(token);
-	_lang_tokenizer_skip_over_whitespace(token);
+	_lang_tokenizer_skip_over_token(token, fileEnd);
+	_lang_tokenizer_skip_over_whitespace(token, fileEnd);
 
 	// The starts_with and strlen calls should be optimized away
-	#define TOKEN(NAME, TOKEN_TYPE) if(lang_starts_with(NAME, token->text)) { token->type = (TOKEN_TYPE); token->length = strlen(NAME); }
+	#define TOKEN(NAME, TOKEN_TYPE) if(lang_starts_with_e(NAME, token->text, fileEnd)) { token->type = (TOKEN_TYPE); token->length = strlen(NAME); }
+	#define KEYWORD(NAME, TOKEN_TYPE) if(lang_starts_with_keyword_e(NAME, token->text, fileEnd)) { token->type = (TOKEN_TYPE); token->length = strlen(NAME); }
 
-	// Comments
-	if(lang_starts_with("//", token->text) || lang_starts_with("#", token->text)) {
-		token->type = lang_token_line_comment;
-		token->length = _lang_tokenizer_end_of_line(token->text) - token->text;
+	// End of file
+	if(token->text >= fileEnd) {
+		token->type = lang_token_end_of_file;
+		token->length = 0;
 	}
-	else if(lang_starts_with("/*", token->text)) {
+	// Comments
+	else if(lang_starts_with_e("//", token->text, fileEnd) || lang_starts_with_e("#", token->text, fileEnd)) {
+		token->type = lang_token_line_comment;
+		token->length = _lang_tokenizer_end_of_line(token->text, fileEnd) - token->text;
+	}
+	else if(lang_starts_with_e("/*", token->text, fileEnd)) {
 		token->type = lang_token_block_comment;
-		token->length = _lang_tokenizer_end_of_block_comment(token->text) - token->text;
+		token->length = _lang_tokenizer_end_of_block_comment(token->text, fileEnd) - token->text;
 	}
 	// Special
 	else TOKEN(";",  lang_token_end_stmt)
 	// Brackets
-	else TOKEN("(", lang_token_open_parenthesis)
-	else TOKEN(")", lang_token_close_parenthesis)
-	else TOKEN("[", lang_token_open_bracket)
-	else TOKEN("]", lang_token_close_bracket)
-	else TOKEN("{", lang_token_open_curly)
-	else TOKEN("}", lang_token_close_curly)
+	else TOKEN("(",  lang_token_open_parenthesis)
+	else TOKEN(")",  lang_token_close_parenthesis)
+	else TOKEN("[",  lang_token_open_bracket)
+	else TOKEN("]",  lang_token_close_bracket)
+	else TOKEN("{",  lang_token_open_curly)
+	else TOKEN("}",  lang_token_close_curly)
 	// Operators: Various
 	else TOKEN(".",  lang_token_dot)
 	else TOKEN(",",  lang_token_comma)
@@ -177,35 +184,34 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	else TOKEN("*",  lang_token_mul)
 	else TOKEN("*=", lang_token_mul_assign)
 	// Keywords
-	else TOKEN("class", lang_token_class)
-	else TOKEN("def",   lang_token_def)
-	else TOKEN("pub",   lang_token_pub)
-	else TOKEN("get",   lang_token_get)
-	else TOKEN("set",   lang_token_set)
-	else TOKEN("new",   lang_token_new)
+	else KEYWORD("class", lang_token_class)
+	else KEYWORD("def",   lang_token_def)
+	else KEYWORD("pub",   lang_token_pub)
+	else KEYWORD("get",   lang_token_get)
+	else KEYWORD("set",   lang_token_set)
+	else KEYWORD("new",   lang_token_new)
 	#undef TOKEN
 	// Quote
-	else if(lang_starts_with("\"", token->text) || lang_starts_with("'", token->text)) {
+	else if(lang_starts_with_e("\"", token->text, fileEnd) || lang_starts_with_e("'", token->text, fileEnd)) {
 		token->type = lang_token_string_literal;
-		token->length = _lang_tokenizer_end_of_string_literal(token->text) - token->text;
-	}
-	// Special
-	else if(token->text[0] == '\0') {
-		token->type = lang_token_end_of_file;
-		token->length = 0;
+		token->length = _lang_tokenizer_end_of_string_literal(token->text, fileEnd) - token->text;
 	}
 	// Number
 	else if(_lang_is_numeric(token->text[0])) {
 		token->type = lang_token_number;
 		token->length = 1;
-		while(_lang_is_numeric(token->text[token->length]))
+		while((token->text + token->length) < fileEnd && _lang_is_numeric(token->text[token->length]))
 			token->length++;
 	}
 	else if(_lang_is_name(token->text[0])) {
 		token->type = lang_token_name;
 		token->length = 1;
-		while(_lang_is_name(token->text[token->length]))
+		while((token->text + token->length) < fileEnd && _lang_is_name(token->text[token->length]))
 			token->length++;
+	}
+	else {
+		token->type = lang_token_unexpected_character;
+		token->length = 1;
 	}
 
 	// printf(
@@ -219,8 +225,12 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 LANG_TOKENIZER_API
 lang_tokenizer lang_tokenizer_create(
 	const char* text,
+	int length,
 	const char* file_name_or_null)
 {
+	if(length < 0)
+		length = strlen(text);
+
 	lang_tokenizer stream;
 
 	memset(&stream, 0, sizeof(stream));
@@ -231,6 +241,8 @@ lang_tokenizer lang_tokenizer_create(
 	stream.current.character = 0;
 	stream.current.text      = text;
 	stream.current.length    = 0;
+
+	stream.userdata = (void*)(text + length);
 
 	stream.pfnNextToken = &_lang_tokenizer_next_token;
 

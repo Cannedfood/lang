@@ -13,3 +13,6 @@
 /compile_commands.*
 /.clangd
 /.cache
+
+/test/fuzz/*-corpus
+/fuzz

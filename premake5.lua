@@ -23,7 +23,7 @@ workspace 'lang'
 	project 'lang'
 		kind 'SharedLib'
 		language 'C'
-		files 'src/**'
+		files 'src/lang/**'
 
 	project 'lang-cli'
 		kind     'ConsoleApp'
@@ -37,12 +37,11 @@ workspace 'lang'
 		files    'extra/lang-lsp/**'
 		links    'lang' includedirs 'src'
 
-	project 'test'
+	project 'test-unit'
 		kind     'ConsoleApp'
 
 		language 'C++'
 			cppdialect 'C++17'
-		defines  'LANG_DEBUG'
-		files    'test/**'
+		files    'test/unit/**'
 
 		links    'lang' includedirs 'src'

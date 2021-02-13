@@ -1,10 +1,18 @@
 #ifdef __cplusplus
-	#define LANG_API extern "C"
-	#define LANG_API_DECL extern "C"
+	#ifndef LANG_API
+		#define LANG_API extern "C"
+	#endif
+	#ifndef LANG_API_DECL
+		#define LANG_API_DECL extern "C"
+	#endif
 	#define LANG_DEFAULT(VALUE) = VALUE
 #else
-	#define LANG_API
-	#define LANG_API_DECL extern
+	#ifndef LANG_API
+		#define LANG_API
+	#endif
+	#ifndef LANG_API_DECL
+		#define LANG_API_DECL extern
+	#endif
 	#define LANG_DEFAULT(VALUE)
 #endif
 

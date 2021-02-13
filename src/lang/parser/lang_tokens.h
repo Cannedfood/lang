@@ -17,10 +17,13 @@ const char* lang_token_names[lang_num_token_types];
 
 struct lang_token {
 	lang_token_type type;
-	const char* file;
-	int line, character;
-	const char* text;
-	int length;
+
+	const char*     file;
+	int             line, character;
+
+	const char*     text;
+	int             length;
+
 
 	#ifdef __cplusplus
 	std::string_view string_view() const noexcept { return std::string_view(text, length); }
@@ -32,6 +35,7 @@ typedef struct lang_token lang_token;
 typedef struct lang_tokenizer lang_tokenizer;
 struct lang_tokenizer {
 	lang_token current;
+	void* userdata;
 
 	void(*pfnNextToken)(lang_tokenizer* tokenizer);
 
@@ -43,4 +47,5 @@ struct lang_tokenizer {
 LANG_TOKENIZER_API
 lang_tokenizer lang_tokenizer_create(
 	const char* text,
+	int length LANG_DEFAULT(-1),
 	const char* file_name_or_null  LANG_DEFAULT(nullptr));

@@ -33,25 +33,25 @@ void parseFile(const char* filepath) {
 
 	// Print tokens
 	// puts("-- Tokens ------------------");
-	// lang_tokenizer_init(&tokenizer, fileContents.data, filepath);
+	// lang_tokenizer tokenizer = lang_tokenizer_create(fileContents.data, fileContents.length, filepath);
 	// do {
 	// 	tokenizer.pfnNextToken(&tokenizer);
 	// 	char buffer[20];
 	// 	sprintf(buffer,
 	// 		"%s:%i:%i:",
-	// 		tokenizer.token.file, tokenizer.token.line+1, tokenizer.token.character+1
+	// 		tokenizer.current.file, tokenizer.current.line+1, tokenizer.current.character+1
 	// 	);
 
 	// 	printf(
 	// 		"%-20s %-20s '%.*s'\n",
 	// 		buffer,
-	// 		lang_token_names[tokenizer.token.type],
-	// 		tokenizer.token.length, tokenizer.token.text
+	// 		lang_token_names[tokenizer.current.type],
+	// 		tokenizer.current.length, tokenizer.current.text
 	// 	);
-	// } while(tokenizer.token.type != lang_token_end_of_file);
+	// } while(tokenizer.current.type != lang_token_end_of_file);
 
-	puts("-- Parsed ------------------");
-	lang_tokenizer tokenizer = lang_tokenizer_create(fileContents.data, filepath);
+	// puts("-- Parsed ------------------");
+	lang_tokenizer tokenizer = lang_tokenizer_create(fileContents.data, fileContents.length, filepath);
 	lang_parser    parser    = print_parser_create();
 
 	lang_parser_parse(&parser, &tokenizer);
