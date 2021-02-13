@@ -31,7 +31,7 @@ typedef struct lang_token lang_token;
 // Token Stream
 typedef struct lang_tokenizer lang_tokenizer;
 struct lang_tokenizer {
-	lang_token token;
+	lang_token current;
 
 	void(*pfnNextToken)(lang_tokenizer* tokenizer);
 

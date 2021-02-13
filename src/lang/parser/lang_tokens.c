@@ -129,7 +129,7 @@ const char* _lang_tokenizer_end_of_block_comment(const char* text) {
 
 static
 void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
-	lang_token* token = &userdata->token;
+	lang_token* token = &userdata->current;
 
 	_lang_tokenizer_skip_over_token(token);
 	_lang_tokenizer_skip_over_whitespace(token);
@@ -149,10 +149,10 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	// Special
 	else TOKEN(";",  lang_token_end_stmt)
 	// Brackets
-	else TOKEN("(", lang_token_open_brace)
-	else TOKEN(")", lang_token_close_brace)
-	else TOKEN("[", lang_token_open_square)
-	else TOKEN("]", lang_token_close_square)
+	else TOKEN("(", lang_token_open_parenthesis)
+	else TOKEN(")", lang_token_close_parenthesis)
+	else TOKEN("[", lang_token_open_bracket)
+	else TOKEN("]", lang_token_close_bracket)
 	else TOKEN("{", lang_token_open_curly)
 	else TOKEN("}", lang_token_close_curly)
 	// Operators: Various
@@ -182,6 +182,7 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	else TOKEN("pub",   lang_token_pub)
 	else TOKEN("get",   lang_token_get)
 	else TOKEN("set",   lang_token_set)
+	else TOKEN("new",   lang_token_new)
 	#undef TOKEN
 	// Quote
 	else if(lang_starts_with("\"", token->text) || lang_starts_with("'", token->text)) {
@@ -221,12 +222,12 @@ void lang_tokenizer_init(
 	const char* text,
 	const char* file_name_or_null)
 {
-	stream->token.type      = lang_token_end_of_file;
-	stream->token.file      = file_name_or_null;
-	stream->token.line      = 0;
-	stream->token.character = 0;
-	stream->token.text      = text;
-	stream->token.length    = 0;
+	stream->current.type      = lang_token_end_of_file;
+	stream->current.file      = file_name_or_null;
+	stream->current.line      = 0;
+	stream->current.character = 0;
+	stream->current.text      = text;
+	stream->current.length    = 0;
 
 	stream->pfnNextToken = &_lang_tokenizer_next_token;
 }

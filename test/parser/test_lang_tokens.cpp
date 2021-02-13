@@ -14,13 +14,13 @@ TEST_CASE("tokenizer", "[compiler][parser][tokens]") {
 		);
 
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_line_comment);
-		CHECK(tokenizer.token.string_view() == "// This is a comment");
+		CHECK(tokenizer.current.type == lang_token_line_comment);
+		CHECK(tokenizer.current.string_view() == "// This is a comment");
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_line_comment);
-		CHECK(tokenizer.token.string_view() == "# As is this");
+		CHECK(tokenizer.current.type == lang_token_line_comment);
+		CHECK(tokenizer.current.string_view() == "# As is this");
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_end_of_file);
+		CHECK(tokenizer.current.type == lang_token_end_of_file);
 	}
 
 	SECTION("block comments") {
@@ -33,24 +33,24 @@ TEST_CASE("tokenizer", "[compiler][parser][tokens]") {
 		);
 
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_block_comment);
-		CHECK(tokenizer.token.string_view() == "/* Block comment 1 */");
-		CHECK(tokenizer.token.line == 1);
-		CHECK(tokenizer.token.character == 0);
-		CHECK(tokenizer.token.character == 0);
+		CHECK(tokenizer.current.type == lang_token_block_comment);
+		CHECK(tokenizer.current.string_view() == "/* Block comment 1 */");
+		CHECK(tokenizer.current.line == 1);
+		CHECK(tokenizer.current.character == 0);
+		CHECK(tokenizer.current.character == 0);
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_block_comment);
-		CHECK(tokenizer.token.string_view() == "/* Block \n comment 2 */");
-		CHECK(tokenizer.token.line == 2);
-		CHECK(tokenizer.token.character == 0);
+		CHECK(tokenizer.current.type == lang_token_block_comment);
+		CHECK(tokenizer.current.string_view() == "/* Block \n comment 2 */");
+		CHECK(tokenizer.current.line == 2);
+		CHECK(tokenizer.current.character == 0);
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_block_comment);
-		CHECK(tokenizer.token.string_view() == "/* Block comment 3 \n*/");
-		CHECK(tokenizer.token.line == 4);
-		CHECK(tokenizer.token.character == 0);
+		CHECK(tokenizer.current.type == lang_token_block_comment);
+		CHECK(tokenizer.current.string_view() == "/* Block comment 3 \n*/");
+		CHECK(tokenizer.current.line == 4);
+		CHECK(tokenizer.current.character == 0);
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_end_of_file);
-		CHECK(tokenizer.token.character == 2);
+		CHECK(tokenizer.current.type == lang_token_end_of_file);
+		CHECK(tokenizer.current.character == 2);
 	}
 
 	SECTION("string literals") {
@@ -59,13 +59,13 @@ TEST_CASE("tokenizer", "[compiler][parser][tokens]") {
 		);
 
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_string_literal);
-		CHECK(tokenizer.token.string_view() == R"("Hello")");
+		CHECK(tokenizer.current.type == lang_token_string_literal);
+		CHECK(tokenizer.current.string_view() == R"("Hello")");
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_string_literal);
-		CHECK(tokenizer.token.string_view() == R"("\"")");
+		CHECK(tokenizer.current.type == lang_token_string_literal);
+		CHECK(tokenizer.current.string_view() == R"("\"")");
 		tokenizer.next();
-		CHECK(tokenizer.token.type == lang_token_end_of_file);
+		CHECK(tokenizer.current.type == lang_token_end_of_file);
 
 		// TODO: test multiline strings whenever they are added
 	}

@@ -1,14 +1,15 @@
 // Keywords
 LANG_TOKEN(class),
 LANG_TOKEN(var),
+LANG_TOKEN(new),
 LANG_TOKEN(pub),
 LANG_TOKEN(get),
 LANG_TOKEN(set),
 
-// Braces
-LANG_TOKEN(open_brace),  LANG_TOKEN(close_brace),
-LANG_TOKEN(open_square), LANG_TOKEN(close_square),
-LANG_TOKEN(open_curly),  LANG_TOKEN(close_curly),
+// Parantheses
+LANG_TOKEN(open_parenthesis), LANG_TOKEN(close_parenthesis),
+LANG_TOKEN(open_bracket), LANG_TOKEN(close_bracket),
+LANG_TOKEN(open_curly), LANG_TOKEN(close_curly),
 
 // Blocks (for potential indention based syntax)
 LANG_TOKEN(enter_block),  LANG_TOKEN(exit_block),
