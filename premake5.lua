@@ -10,6 +10,7 @@ workspace 'lang'
 	filter 'configurations:debug'
 		optimize 'Debug'
 		symbols 'On'
+		defines 'LANG_DEBUG'
 	filter 'configurations:release'
 		optimize 'Speed'
 		flags 'LinkTimeOptimization'
@@ -18,18 +19,23 @@ workspace 'lang'
 
 	location(_OPTIONS.location)
 
+
 	project 'lang'
 		kind 'SharedLib'
 		language 'C'
-		defines 'LANG_DEBUG'
 		files 'src/**'
 
 	project 'lang-cli'
-		kind    'ConsoleApp'
+		kind     'ConsoleApp'
 		language 'C'
-		files   'extra/cli/**'
-		defines 'LANG_DEBUG'
-		links   'lang' includedirs 'src'
+		files    'extra/cli/**'
+		links    'lang' includedirs 'src'
+
+	project 'lang-language-server'
+		kind     'ConsoleApp'
+		language 'C'
+		files    'extra/language-server/**'
+		links    'lang' includedirs 'src'
 
 	project 'test'
 		kind     'ConsoleApp'
