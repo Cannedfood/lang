@@ -1,10 +1,43 @@
-LANG_AST_NODE(root,)
-
-LANG_AST_NODE(class,
-	lang_token name;
+LANG_AST_NODE(scope,
+	lang_ast_node* content;
 )
 
-LANG_AST_NODE(assignment,
+LANG_AST_NODE(class,
+	lang_ast_node* content; // scope->content
+)
+
+LANG_AST_NODE(function,
+	lang_ast_node* content; // scope->content
+	lang_ast_node* arguments; // Should all be variables
+)
+
+LANG_AST_NODE(declaration,
+	lang_token name;
+	lang_ast_node* initial_value;
+)
+
+LANG_AST_NODE(expression,
+	lang_token where;
+	lang_ast_node* children;
+)
+
+LANG_AST_NODE(binop,
+	lang_token op;
 	lang_ast_node* left;
 	lang_ast_node* right;
+)
+
+LANG_AST_NODE(unop,
+	lang_token op;
+	lang_ast_node* expression;
+)
+
+LANG_AST_NODE(call,
+	lang_token where;
+	lang_ast_node* target;
+	lang_ast_node* arguments;
+)
+
+LANG_AST_NODE(value,
+	lang_token value;
 )

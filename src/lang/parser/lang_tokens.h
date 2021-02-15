@@ -48,4 +48,4 @@ LANG_TOKENIZER_API
 lang_tokenizer lang_tokenizer_create(
 	const char* text,
 	int length LANG_DEFAULT(-1),
-	const char* file_name_or_null  LANG_DEFAULT(nullptr));
+	const char* filename LANG_DEFAULT(NULL));

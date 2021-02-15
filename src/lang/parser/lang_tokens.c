@@ -3,7 +3,7 @@
 #include "./lang_parse_util.h"
 
 #include <string.h> // strlen
-#include <stdio.h> // TODO: remove (printf)
+#include <assert.h>
 
 LANG_TOKENIZER_API
 const char* lang_token_names[lang_num_token_types] = {
@@ -116,7 +116,7 @@ const char* _lang_tokenizer_end_of_string_literal(const char* text, const char* 
 
 static
 const char* _lang_tokenizer_end_of_block_comment(const char* text, const char* fileEnd) {
-	// TODO: assert(lang_starts_with_e("/*", text));
+	assert(lang_starts_with_e("/*", text, fileEnd));
 	text += 2;
 	while(text < fileEnd) {
 		if(lang_starts_with_e("*/", text, fileEnd)) {

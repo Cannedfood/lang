@@ -7,8 +7,7 @@
 #include <lang/util/lang_buffer.h>
 #include <lang/parser/lang_tokens.h>
 #include <lang/parser/lang_parser.h>
-
-#include "print-parser.h"
+#include <lang/ast/lang_ast_parser.h>
 
 lang_buffer readFile(const char* path) {
 	lang_buffer buf = lang_buffer_new();
@@ -26,6 +25,60 @@ lang_buffer readFile(const char* path) {
 	fclose(file);
 
 	return buf;
+}
+
+void printAst(lang_ast_node* node, int indentN, int depth) {
+	while(node) {
+		switch (node->type) {
+		case lang_ast_type_scope:
+			printf("%*sscope\n", depth, "");
+			printAst(node->as_scope.content, indentN, depth + indentN);
+		break;
+		case lang_ast_type_class:
+			printf("%*sclass\n", depth, "");
+			printAst(node->as_scope.content, indentN, depth + indentN);
+		break;
+		case lang_ast_type_function:
+			printf("%*sfunction\n", depth, "");
+			printf("%*s args:\n", depth, "");
+			printAst(node->as_function.arguments, indentN, depth + indentN);
+			printf("%*s body:\n", depth, "");
+			printAst(node->as_scope.content, indentN, depth + indentN);
+		break;
+		case lang_ast_type_declaration:
+			printf("%*sdef %.*s\n", depth, "", node->as_declaration.name.length, node->as_declaration.name.text);
+			printAst(node->as_declaration.initial_value, indentN, depth + indentN);
+		break;
+		case lang_ast_type_expression:
+			printf("%*sexpression\n", depth, "");
+			printAst(node->as_expression.children, indentN, depth + indentN);
+		break;
+		case lang_ast_type_binop:
+			printf("%*sbinop %.*s\n", depth, "", node->as_binop.op.length, node->as_binop.op.text);
+			printf("%*s left:\n", depth, "");
+			printAst(node->as_binop.left, indentN, depth + indentN);
+			printf("%*s right:\n", depth, "");
+			printAst(node->as_binop.right, indentN, depth + indentN);
+		break;
+		case lang_ast_type_unop:
+			printf("%*sunop %.*s\n", depth, "", node->as_unop.op.length, node->as_unop.op.text);
+			printAst(node->as_unop.expression, indentN, depth + indentN);
+		break;
+		case lang_ast_type_call:
+			printf("%*scall\n", depth, "");
+			printf("%*starget:\n", depth, "");
+			printAst(node->as_call.target, indentN, depth + indentN);
+			printf("%*sarguments:\n", depth, "");
+			printAst(node->as_call.arguments, indentN, depth + indentN);
+		break;
+		case lang_ast_type_value:
+			printf("%*svalue %.*s\n", depth, "", node->as_value.value.length, node->as_value.value.text);
+		break;
+		case lang_num_ast_types: LANG_UNREACHABLE; break;
+		}
+
+		node = node->next;
+	}
 }
 
 void parseFile(const char* filepath) {
@@ -51,13 +104,21 @@ void parseFile(const char* filepath) {
 	// } while(tokenizer.current.type != lang_token_end_of_file);
 
 	// puts("-- Parsed ------------------");
-	lang_tokenizer tokenizer = lang_tokenizer_create(fileContents.data, fileContents.length, filepath);
-	lang_parser    parser    = print_parser_create();
+	lang_allocator* allocator = lang_new_allocator();
 
-	lang_parser_parse(&parser, &tokenizer);
+	lang_tokenizer  tokenizer = lang_tokenizer_create(fileContents.data, fileContents.length, filepath);
+	lang_alloc_callbacks alloc = lang_alloc_callbacks_for(allocator);
+
+	alloc.alloc(alloc.userdata, 32);
+	lang_ast_parser parser    = lang_create_parser_ast(alloc, 0);
+	lang_parser_parse(&parser.parser, &tokenizer);
+
+	printAst(parser.root, 2, 0);
+
+	lang_free_allocator(allocator);
 
 	// Done
-	lang_buffer_free(&fileContents);
+	lang_buffer_destroy(&fileContents);
 }
 
 int main(int argc, const char** argv) {

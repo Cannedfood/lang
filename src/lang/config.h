@@ -1,3 +1,5 @@
+#include <stdlib.h> // LANG_UNREACHABLE: abort
+
 #ifdef __cplusplus
 	#ifndef LANG_API
 		#define LANG_API extern "C"
@@ -15,6 +17,8 @@
 	#endif
 	#define LANG_DEFAULT(VALUE)
 #endif
+
+#define LANG_UNREACHABLE abort()
 
 #define LANG_PARSER_API         LANG_API
 #define LANG_TOKENIZER_API      LANG_API

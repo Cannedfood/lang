@@ -4,34 +4,45 @@
 
 #include "../config.h"
 
-struct lang_parser {
-	void* userpointer;
-
-	// Comments
-	void(*pfnComment)(void* userpointer, lang_token const* comment);
-
-	// Operators
-	void(*pfnBeginExpression)(lang_token const* where);
-
-	void(*pfnLiteral)(lang_token const* value);
-	void(*pfnBinop)(lang_token const* which);
-	void(*pfnIndexOperator)(lang_token const* where);
-	void(*pfnCallOperator)(lang_token const* where);
-
-	void(*pfnEndExpression)(lang_token const* where);
-
-	// Statement
-	void(*pfnBeginFunction)(lang_token const* where);
-	void(*pfnAddArgument)(lang_token const* name);
-	void(*pfnBeginFunctionBody)(lang_token const* where);
-	void(*pfnEndFunctionBody)(lang_token const* where);
-
-	void(*pfnError)(void* userpointer, const char* fmt, ...); // The parser only allocates on the stack, so you may longjmp out of it
-};
 typedef struct lang_parser lang_parser;
+struct lang_parser {
+	// -- Comments --
+	void(*pfnComment)(lang_parser* p, lang_token const* comment);
 
+	// -- Expressions --
+	// subexpressions (parantheses)
+	void(*pfnBeginSubexpression)(lang_parser* p, lang_token const* where);
+	void(*pfnEndSubexpression)(lang_parser* p, lang_token const* where);
+	// operations
+	void(*pfnBinop)(lang_parser* p, lang_token const* which);
+	void(*pfnBeginCall)(lang_parser* p, lang_token const* where);
+	void(*pfnNextCallArgument)(lang_parser* p, lang_token const* where);
+	void(*pfnEndCall)(lang_parser* p, lang_token const* where);
+	// values
+	void(*pfnValue)(lang_parser* p, lang_token const* value);
+	// functions
+	void(*pfnBeginFunction)(lang_parser* p, lang_token const* where);
+	void(*pfnFuncArgument)(lang_parser* p, lang_token const* name);
+	void(*pfnEndFunction)(lang_parser* p, lang_token const* where);
+
+	// -- Statements --
+	void(*pfnNextStatement)(lang_parser* p);
+	// declarations
+	void(*pfnDeclare)(lang_parser* p, lang_token const* name);
+	void(*pfnInitDeclaration)(lang_parser* p);
+	// classes
+	void(*pfnBeginClass)(lang_parser* p, lang_token const* name);
+	void(*pfnEndClass)(lang_parser* p, lang_token const* where);
+
+	void(*pfnError)(lang_parser* p, const char* fmt, ...); // The parser only allocates on the stack, so you may longjmp out of it
+};
+
+
+enum lang_parser_default_flags {
+	lang_parser_defaults_print_errors = 1,
+};
 LANG_PARSER_API
-lang_parser lang_parser_empty();
+lang_parser lang_parser_defaults(int flags LANG_DEFAULT(0));
 
 LANG_PARSER_API
 void lang_parser_parse(lang_parser* parser, lang_tokenizer* tokens);

@@ -12,28 +12,32 @@ lang_buffer lang_buffer_new() {
 	return result;
 }
 LANG_UTIL_BUFFER_API
-void lang_buffer_free(lang_buffer* buffer) {
+void lang_buffer_destroy(lang_buffer* buffer) {
+	free(buffer->data);
+
 	buffer->length = 0;
 	buffer->capacity = 0;
-	free(buffer->data);
+	buffer->data = 0;
 }
 
 LANG_UTIL_BUFFER_API
 void lang_buffer_reserve(lang_buffer* buffer, size_t bytes) {
 	if(buffer->capacity < buffer->length + bytes) {
-		if(buffer->capacity) {
-			while(buffer->capacity < buffer->length + bytes)
-				buffer->capacity *= 2;
-		}
-		else
+		// Initial capacity
+		if(buffer->capacity == 0)
 			buffer->capacity = 256;
 
+		// Double size until it fits
+		while(buffer->capacity < (buffer->length + bytes))
+			buffer->capacity *= 2;
+
+		// Alloc!
 		buffer->data = realloc(buffer->data, buffer->capacity);
 	}
 }
 
 LANG_UTIL_BUFFER_API
-void lang_buffer_append(lang_buffer* buffer,  void const* data, size_t bytes) {
+void lang_buffer_append(lang_buffer* buffer, void const* data, size_t bytes) {
 	lang_buffer_reserve(buffer, bytes);
 	memcpy(buffer->data + buffer->length, data, bytes);
 	buffer->length += bytes;
