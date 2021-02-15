@@ -26,7 +26,7 @@ lang_ast_node* _lang_alloc_node(lang_alloc_callbacks const* alloc, lang_ast_type
 	return result;
 }
 
-static int precedence(lang_token_type op) {
+static int _precedence(lang_token_type op) {
 	switch (op) {
 	default: return 0;
 	case lang_token_plus: case lang_token_minus: return 1;
@@ -35,15 +35,26 @@ static int precedence(lang_token_type op) {
 	}
 }
 
+static lang_ast_node* _walk_up_to(lang_ast_node* from, lang_ast_type type) {
+	while(from->type != type) {
+		assert(from->parent);
+		from = from->parent;
+	}
+	return from;
+}
+
+static lang_ast_node* _walk_out_of(lang_ast_node* from, lang_ast_type type) {
+	from = _walk_up_to(from, type);
+	assert(from->parent);
+	return from->parent;
+}
+
 static int _lang_is_scope(lang_ast_type type) {
 	return type == lang_ast_type_scope || type == lang_ast_type_function || type == lang_ast_type_class;
 }
 
-static void _lang_pop_scope(lang_ast_parser* parser, lang_ast_type scopeType) {
-	while(parser->current->type != scopeType) {
-		assert(parser->current->parent);
-		parser->current = parser->current->parent;
-	}
+static void _pop_scope(lang_ast_parser* parser, lang_ast_type scopeType) {
+	parser->current = _walk_up_to(parser->current, scopeType);
 	parser->current = parser->current->parent;
 	while(!_lang_is_scope(parser->current->type)) {
 		assert(parser->current->parent);
@@ -51,169 +62,143 @@ static void _lang_pop_scope(lang_ast_parser* parser, lang_ast_type scopeType) {
 	}
 }
 
-static lang_ast_node* _lang_ast_append_expression(lang_ast_node* to, lang_ast_node* what) {
-	if(what->type == lang_ast_type_binop) {
-		assert(to->type == lang_ast_type_value || to->type == lang_ast_type_expression);
-		// TODO: enforce operator precedence
-		lang_ast_replace(to, what);
-		lang_ast_append(what, &what->as_binop.left, what);
-		return what;
-	}
-
-	if(_lang_is_scope(to->type)) {
-		lang_ast_append(to, &to->as_scope.content, what);
-		return what;
-	}
-
-	LANG_UNREACHABLE;
-}
-
 static void _lang_ast_begin_subexpression(lang_parser* parser, lang_token const* token) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* node = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_expression);
-	if(_lang_is_scope(ast_parser->current->type)) {
-		lang_ast_append(ast_parser->current, &ast_parser->current->as_scope.content, node);
-		ast_parser->current = node;
+	lang_ast_node* node = _lang_alloc_node(&p->allocator, lang_ast_type_expression);
+	if(_lang_is_scope(p->current->type)) {
+		lang_ast_append(p->current, &p->current->as_scope.content, node);
+		p->current = node;
 	}
 	else {
 		// TODO, skip for now
 	}
 }
 static void _lang_ast_end_subexpression(lang_parser* parser, lang_token const* token) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
-	while(ast_parser->current->type != lang_ast_type_expression) {
-		ast_parser->current = ast_parser->current->parent;
-	}
-	ast_parser->current = ast_parser->current->parent;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	p->current = _walk_out_of(p->current, lang_ast_type_expression);
 }
 static void _lang_ast_binop(lang_parser* parser, lang_token const* op) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* binop = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_binop);
+	lang_ast_node* binop = _lang_alloc_node(&p->allocator, lang_ast_type_binop);
 	binop->as_binop.op = *op;
 
-	if(_lang_is_scope(ast_parser->current->type)) {
-		lang_ast_append(ast_parser->current, &ast_parser->current->as_scope.content, binop);
-		ast_parser->current = binop;
+	if(_lang_is_scope(p->current->type)) {
+		lang_ast_append(p->current, &p->current->as_scope.content, binop);
+		p->current = binop;
 	}
-	else if(ast_parser->current->type == lang_ast_type_value) {
-		binop->as_binop.left = lang_ast_replace(ast_parser->current, binop);
-		ast_parser->current = binop;
+	else if(p->current->type == lang_ast_type_value) {
+		binop->as_binop.left = lang_ast_replace(p->current, binop);
+		p->current = binop;
 	}
 }
 static void _lang_ast_begin_call(lang_parser* parser, lang_token const* where) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* node = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_call);
+	lang_ast_node* node = _lang_alloc_node(&p->allocator, lang_ast_type_call);
 	node->as_call.where = *where;
 
 	if(
-		ast_parser->current->type == lang_ast_type_value ||
-		ast_parser->current->type == lang_ast_type_binop ||
-		ast_parser->current->type == lang_ast_type_expression)
+		p->current->type == lang_ast_type_value ||
+		p->current->type == lang_ast_type_binop ||
+		p->current->type == lang_ast_type_expression)
 	{
-		lang_ast_node* target = lang_ast_replace(ast_parser->current, node);
+		lang_ast_node* target = lang_ast_replace(p->current, node);
 		lang_ast_append(node, &node->as_call.target, target);
-		ast_parser->current = node;
+		p->current = node;
 	}
 }
 static void _lang_ast_next_call_argument(lang_parser* parser, lang_token const* where) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
-	while(ast_parser->current->type != lang_ast_type_call) {
-		assert(ast_parser->current->parent);
-		ast_parser->current = ast_parser->current->parent;
-	}
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	p->current = _walk_up_to(p->current, lang_ast_type_call);
 
-	lang_ast_node* arg = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_expression);
-	lang_ast_append(ast_parser->current, &ast_parser->current->as_call.arguments, arg);
-	ast_parser->current = arg;
+	lang_ast_node* arg = _lang_alloc_node(&p->allocator, lang_ast_type_expression);
+	lang_ast_append(p->current, &p->current->as_call.arguments, arg);
+	p->current = arg;
 }
 static void _lang_ast_end_call(lang_parser* parser, lang_token const* where) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
-	while(ast_parser->current->type != lang_ast_type_call) {
-		assert(ast_parser->current->parent);
-		ast_parser->current = ast_parser->current->parent;
-	}
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	p->current = _walk_up_to(p->current, lang_ast_type_call);
 }
 
 static void _lang_ast_value(lang_parser* parser, lang_token const* value) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* node = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_value);
+	lang_ast_node* node = _lang_alloc_node(&p->allocator, lang_ast_type_value);
 	node->as_value.value = *value;
 
-	if(_lang_is_scope(ast_parser->current->type)) {
-		lang_ast_append(ast_parser->current, &ast_parser->current->as_scope.content, node);
-		ast_parser->current = node;
+	if(_lang_is_scope(p->current->type)) {
+		lang_ast_append(p->current, &p->current->as_scope.content, node);
+		p->current = node;
 	}
-	else if(ast_parser->current->type == lang_ast_type_binop) {
-		lang_ast_append(ast_parser->current, &ast_parser->current->as_binop.right, node);
-		ast_parser->current = node;
+	else if(p->current->type == lang_ast_type_binop) {
+		lang_ast_append(p->current, &p->current->as_binop.right, node);
+		p->current = node;
 	}
 }
 
 static void _lang_ast_begin_function(lang_parser* parser, lang_token const* token) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	assert(_lang_is_scope(ast_parser->current->type));
+	assert(_lang_is_scope(p->current->type));
 
-	lang_ast_node* fn = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_function);
-	lang_ast_append(ast_parser->current, &ast_parser->current->as_scope.content, fn);
-	ast_parser->current = fn;
+	lang_ast_node* fn = _lang_alloc_node(&p->allocator, lang_ast_type_function);
+	lang_ast_append(p->current, &p->current->as_scope.content, fn);
+	p->current = fn;
 }
 static void _lang_ast_add_func_argument(lang_parser* parser, lang_token const* name) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	assert(ast_parser->current->type == lang_ast_type_function);
+	assert(p->current->type == lang_ast_type_function);
 
-	lang_ast_node* arg = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_declaration);
+	lang_ast_node* arg = _lang_alloc_node(&p->allocator, lang_ast_type_declaration);
 	arg->as_declaration.name = *name;
-	lang_ast_append(ast_parser->current, &ast_parser->current->as_function.arguments, arg);
+	lang_ast_append(p->current, &p->current->as_function.arguments, arg);
 }
 static void _lang_ast_end_function(lang_parser* parser, lang_token const* token) {
-	_lang_pop_scope((lang_ast_parser*)parser, lang_ast_type_function);
+	_pop_scope((lang_ast_parser*)parser, lang_ast_type_function);
 }
 static void _lang_ast_next_statement(lang_parser* parser) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
-	while(!_lang_is_scope(ast_parser->current->type)) {
-		assert(ast_parser->current->parent);
-		ast_parser->current = ast_parser->current->parent;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	while(!_lang_is_scope(p->current->type)) {
+		assert(p->current->parent);
+		p->current = p->current->parent;
 	}
 }
 
 static void _lang_ast_declare(lang_parser* parser, lang_token const* name) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	assert(_lang_is_scope(ast_parser->current->type));
+	assert(_lang_is_scope(p->current->type));
 
-	lang_ast_node* declaration = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_declaration);
-	lang_ast_append(ast_parser->current, &ast_parser->current->as_scope.content, declaration);
+	lang_ast_node* declaration = _lang_alloc_node(&p->allocator, lang_ast_type_declaration);
+	lang_ast_append(p->current, &p->current->as_scope.content, declaration);
 	declaration->as_declaration.name = *name;
 }
 static void _lang_ast_init_declaration(lang_parser* parser) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	assert(_lang_is_scope(ast_parser->current->type));
+	assert(_lang_is_scope(p->current->type));
 
-	lang_ast_node* last = lang_ast_last(ast_parser->current->as_scope.content);
+	lang_ast_node* last = lang_ast_last(p->current->as_scope.content);
 	assert(last);
 	assert(last->type == lang_ast_type_declaration);
-	ast_parser->current = last;
+	p->current = last;
 }
 
 static void _lang_ast_begin_class(lang_parser* parser, lang_token const* where) {
-	lang_ast_parser* ast_parser = (lang_ast_parser*)parser;
+	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	assert(_lang_is_scope(ast_parser->current->type));
+	assert(_lang_is_scope(p->current->type));
 
-	lang_ast_node* node = _lang_alloc_node(&ast_parser->allocator, lang_ast_type_class);
+	lang_ast_node* node = _lang_alloc_node(&p->allocator, lang_ast_type_class);
 
-	lang_ast_append(ast_parser->current, &ast_parser->current->as_scope.content, node);
-	ast_parser->current = node;
+	lang_ast_append(p->current, &p->current->as_scope.content, node);
+	p->current = node;
 }
 static void _lang_ast_end_class(lang_parser* parser, lang_token const* token) {
-	_lang_pop_scope((lang_ast_parser*)parser, lang_ast_type_class);
+	_pop_scope((lang_ast_parser*)parser, lang_ast_type_class);
 }
 
 LANG_AST_API
