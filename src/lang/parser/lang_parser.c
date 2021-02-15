@@ -254,7 +254,9 @@ void _lang_parse_expression(lang_parser* parser, lang_tokenizer* tokens, int asS
 
 static
 void _lang_parse_declaration(lang_parser* parser, lang_tokenizer* tokens) {
-	lang_token varName = _lang_next_token_expect(parser, tokens, lang_token_name, "Expected variable name after 'var' keyword");
+	_lang_next_token_expect(parser, tokens, lang_token_name, "Expected variable name after 'var' keyword");
+
+	parser->pfnDeclare(parser, &tokens->current);
 
 	_lang_next_token(parser, tokens);
 	if(tokens->current.type == lang_token_end_stmt) {

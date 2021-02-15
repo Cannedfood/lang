@@ -40,7 +40,6 @@ void printAst(lang_ast_node* node, int indentN, int depth) {
 		break;
 		case lang_ast_type_function:
 			printf("%*sfunction\n", depth, "");
-			printf("%*s args:\n", depth, "");
 			printAst(node->as_function.arguments, indentN, depth + indentN);
 			printf("%*s body:\n", depth, "");
 			printAst(node->as_scope.content, indentN, depth + indentN);
@@ -55,9 +54,7 @@ void printAst(lang_ast_node* node, int indentN, int depth) {
 		break;
 		case lang_ast_type_binop:
 			printf("%*sbinop %.*s\n", depth, "", node->as_binop.op.length, node->as_binop.op.text);
-			printf("%*s left:\n", depth, "");
 			printAst(node->as_binop.left, indentN, depth + indentN);
-			printf("%*s right:\n", depth, "");
 			printAst(node->as_binop.right, indentN, depth + indentN);
 		break;
 		case lang_ast_type_unop:
@@ -66,10 +63,11 @@ void printAst(lang_ast_node* node, int indentN, int depth) {
 		break;
 		case lang_ast_type_call:
 			printf("%*scall\n", depth, "");
-			printf("%*starget:\n", depth, "");
 			printAst(node->as_call.target, indentN, depth + indentN);
-			printf("%*sarguments:\n", depth, "");
-			printAst(node->as_call.arguments, indentN, depth + indentN);
+			if(node->as_call.arguments) {
+				printf("%*s arguments:\n", depth, "");
+				printAst(node->as_call.arguments, indentN, depth + indentN);
+			}
 		break;
 		case lang_ast_type_value:
 			printf("%*svalue %.*s\n", depth, "", node->as_value.value.length, node->as_value.value.text);
@@ -113,7 +111,7 @@ void parseFile(const char* filepath) {
 	lang_ast_parser parser    = lang_create_parser_ast(alloc, 0);
 	lang_parser_parse(&parser.parser, &tokenizer);
 
-	printAst(parser.root, 2, 0);
+	printAst(parser.root->as_scope.content, 4, 0);
 
 	lang_free_allocator(allocator);
 

@@ -4,15 +4,15 @@
 #include <string.h>
 #include <limits.h>
 
-lang_ast_node* _lang_alloc_node(lang_alloc_callbacks const* alloc, lang_ast_type type) {
+lang_ast_node* _new_node(lang_ast_parser const* parser, lang_ast_type type) {
 	assert(type != lang_num_ast_types);
 
 	lang_ast_node* result;
 	switch (type) {
 	#define LANG_AST_NODE(NAME, MEMBERS)        \
 	    case LANG_AST_TAG(NAME):                \
-	        result = alloc->alloc(              \
-	            alloc->userdata,                \
+	        result = parser->allocator.alloc(       \
+	            parser->allocator.userdata,         \
 	            sizeof(LANG_AST_STRUCT(NAME))   \
 	        );                                  \
 	        memset(&result->as_##NAME, 0, sizeof(result->as_##NAME)); \
@@ -30,13 +30,14 @@ lang_ast_node* _lang_alloc_node(lang_alloc_callbacks const* alloc, lang_ast_type
 static int _node_precedence(lang_ast_node* node) {
 	if(node->type == lang_ast_type_expression) return INT_MAX;
 	if(node->type == lang_ast_type_unop) return INT_MAX;
-	if(node->type == lang_ast_type_call) return INT_MAX;
+	if(node->type == lang_ast_type_call) return 4;
 
 	assert(node->type == lang_ast_type_binop);
 	switch (node->as_binop.op.type) {
 	case lang_token_plus: case lang_token_minus: return 1;
 	case lang_token_mul:  case lang_token_div:   return 2;
 	case lang_token_dot:  case lang_token_open_bracket: return 3;
+	case lang_token_assign: return 4;
 	default: return INT_MAX;
 	}
 }
@@ -81,10 +82,27 @@ static void _pop_scope(lang_ast_parser* parser, lang_ast_type scopeType) {
 	}
 }
 
+static lang_ast_node* _append_value(lang_ast_node* current, lang_ast_node* node) {
+	if(_lang_is_scope(current->type))
+		lang_ast_append(current, &current->as_scope.content, node);
+	else if(current->type == lang_ast_type_binop)
+		lang_ast_append(current, &current->as_binop.right, node);
+	else if(current->type == lang_ast_type_expression)
+		lang_ast_append(current, &current->as_expression.children, node);
+	else if(current->type == lang_ast_type_declaration)
+		lang_ast_append(current, &current->as_declaration.initial_value, node);
+	else
+		assert(!"Invalid location for value"); // I'm tired and drunk, so take this message or leave it.
+
+	return node;
+}
+
+// Parser interface
+
 static void _lang_ast_begin_subexpression(lang_parser* parser, lang_token const* token) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* node = _lang_alloc_node(&p->allocator, lang_ast_type_expression);
+	lang_ast_node* node = _new_node(p, lang_ast_type_expression);
 	if(_lang_is_scope(p->current->type)) {
 		lang_ast_append(p->current, &p->current->as_scope.content, node);
 		p->current = node;
@@ -100,7 +118,7 @@ static void _lang_ast_end_subexpression(lang_parser* parser, lang_token const* t
 static void _lang_ast_binop(lang_parser* parser, lang_token const* op) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* binop = _lang_alloc_node(&p->allocator, lang_ast_type_binop);
+	lang_ast_node* binop = _new_node(p, lang_ast_type_binop);
 	binop->as_binop.op = *op;
 
 	if(_lang_is_scope(p->current->type)) {
@@ -117,8 +135,8 @@ static void _lang_ast_binop(lang_parser* parser, lang_token const* op) {
 static void _lang_ast_begin_call(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* node = _lang_alloc_node(&p->allocator, lang_ast_type_call);
-	node->as_call.where = *where;
+	lang_ast_node* call = _new_node(p, lang_ast_type_call);
+	call->as_call.where = *where;
 
 	if(
 		p->current->type == lang_ast_type_value ||
@@ -126,56 +144,58 @@ static void _lang_ast_begin_call(lang_parser* parser, lang_token const* where) {
 		p->current->type == lang_ast_type_expression)
 	{
 		lang_ast_node* target = lang_ast_replace(
-			_associated_expression(p->current, _node_precedence(node)),
-			node
+			_associated_expression(p->current, _node_precedence(call)),
+			call
 		);
-		lang_ast_append(node, &node->as_call.target, target);
-		p->current = node;
+		lang_ast_append(call, &call->as_call.target, target);
+		p->current = call;
 	}
 }
 static void _lang_ast_next_call_argument(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 	p->current = _walk_up_to(p->current, lang_ast_type_call);
 
-	lang_ast_node* arg = _lang_alloc_node(&p->allocator, lang_ast_type_expression);
+	lang_ast_node* arg = _new_node(p, lang_ast_type_expression);
 	lang_ast_append(p->current, &p->current->as_call.arguments, arg);
 	p->current = arg;
 }
 static void _lang_ast_end_call(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 	p->current = _walk_up_to(p->current, lang_ast_type_call);
+
+	// Clean up unnecessary expression nodes
+	lang_ast_node* arg = p->current->as_call.arguments;
+	while(arg) {
+		if(
+			arg->type == lang_ast_type_expression &&
+			arg->as_expression.children &&
+			!arg->as_expression.children->next)
+		{
+			lang_ast_node* arg_value = lang_ast_remove(arg->as_expression.children);
+			p->allocator.free(p->allocator.userdata,
+				lang_ast_replace(arg, arg_value)
+			);
+		}
+		arg = arg->next;
+	}
 }
 
-static lang_ast_node* _lang_append_value(lang_ast_node* current, lang_ast_node* node) {
-	if(_lang_is_scope(current->type))
-		lang_ast_append(current, &current->as_scope.content, node);
-	else if(current->type == lang_ast_type_binop)
-		lang_ast_append(current, &current->as_binop.right, node);
-	else if(current->type == lang_ast_type_expression)
-		lang_ast_append(current, &current->as_expression.children, node);
-	else if(current->type == lang_ast_type_declaration)
-		lang_ast_append(current, &current->as_declaration.initial_value, node);
-	else
-		assert(!"Invalid location for value"); // I'm tired and drunk, so take this message or leave it.
-
-	return node;
-}
 static void _lang_ast_value(lang_parser* parser, lang_token const* value) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* node = _lang_alloc_node(&p->allocator, lang_ast_type_value);
+	lang_ast_node* node = _new_node(p, lang_ast_type_value);
 	node->as_value.value = *value;
 
-	p->current = _lang_append_value(p->current, node);
+	p->current = _append_value(p->current, node);
 }
 
 
 static void _lang_ast_begin_function(lang_parser* parser, lang_token const* token) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	p->current = _lang_append_value(
+	p->current = _append_value(
 		p->current,
-		_lang_alloc_node(&p->allocator, lang_ast_type_function)
+		_new_node(p, lang_ast_type_function)
 	);
 }
 static void _lang_ast_add_func_argument(lang_parser* parser, lang_token const* name) {
@@ -183,7 +203,7 @@ static void _lang_ast_add_func_argument(lang_parser* parser, lang_token const* n
 
 	assert(p->current->type == lang_ast_type_function);
 
-	lang_ast_node* arg = _lang_alloc_node(&p->allocator, lang_ast_type_declaration);
+	lang_ast_node* arg = _new_node(p, lang_ast_type_declaration);
 	arg->as_declaration.name = *name;
 	lang_ast_append(p->current, &p->current->as_function.arguments, arg);
 }
@@ -203,7 +223,7 @@ static void _lang_ast_declare(lang_parser* parser, lang_token const* name) {
 
 	assert(_lang_is_scope(p->current->type));
 
-	lang_ast_node* declaration = _lang_alloc_node(&p->allocator, lang_ast_type_declaration);
+	lang_ast_node* declaration = _new_node(p, lang_ast_type_declaration);
 	lang_ast_append(p->current, &p->current->as_scope.content, declaration);
 	declaration->as_declaration.name = *name;
 
@@ -223,9 +243,9 @@ static void _lang_ast_init_declaration(lang_parser* parser) {
 static void _lang_ast_begin_class(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	p->current = _lang_append_value(
+	p->current = _append_value(
 		p->current,
-		_lang_alloc_node(&p->allocator, lang_ast_type_class)
+		_new_node(p, lang_ast_type_class)
 	);
 }
 static void _lang_ast_end_class(lang_parser* parser, lang_token const* token) {
@@ -238,8 +258,7 @@ lang_ast_parser lang_create_parser_ast(lang_alloc_callbacks alloc, unsigned lang
 
 	result.allocator = alloc;
 
-	result.root    = _lang_alloc_node(&alloc, lang_ast_type_scope);
-	result.current = result.root;
+	result.parser = lang_parser_defaults(lang_parser_defaults_print_errors);
 
 	result.parser.pfnBeginSubexpression = _lang_ast_begin_subexpression;
 	result.parser.pfnEndSubexpression   = _lang_ast_end_subexpression;
@@ -256,6 +275,10 @@ lang_ast_parser lang_create_parser_ast(lang_alloc_callbacks alloc, unsigned lang
 	result.parser.pfnInitDeclaration    = _lang_ast_init_declaration;
 	result.parser.pfnBeginClass         = _lang_ast_begin_class;
 	result.parser.pfnEndClass           = _lang_ast_end_class;
+
+
+	result.root    = _new_node(&result, lang_ast_type_scope);
+	result.current = result.root;
 
 	return result;
 }
