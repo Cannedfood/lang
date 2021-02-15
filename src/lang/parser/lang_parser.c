@@ -332,7 +332,22 @@ lang_parser lang_parser_defaults(int flags) {
 	int printErrors = flags & lang_parser_defaults_print_errors;
 
 	lang_parser result = {
-		
+		.pfnComment            = _lang_default_ignore1,
+		.pfnBeginSubexpression = _lang_default_ignore1,
+		.pfnEndSubexpression   = _lang_default_ignore1,
+		.pfnBinop              = _lang_default_ignore1,
+		.pfnBeginCall          = _lang_default_ignore1,
+		.pfnNextCallArgument   = _lang_default_ignore1,
+		.pfnEndCall            = _lang_default_ignore1,
+		.pfnValue              = _lang_default_ignore1,
+		.pfnBeginFunction      = _lang_default_ignore1,
+		.pfnFuncArgument       = _lang_default_ignore1,
+		.pfnEndFunction        = _lang_default_ignore1,
+		.pfnNextStatement      = _lang_default_ignore0,
+		.pfnDeclare            = _lang_default_ignore1,
+		.pfnInitDeclaration    = _lang_default_ignore0,
+		.pfnBeginClass         = _lang_default_ignore1,
+		.pfnEndClass           = _lang_default_ignore1,
 
 		.pfnError = printErrors?_lang_default_print_error_fn:_lang_default_void_error_fn,
 	};
