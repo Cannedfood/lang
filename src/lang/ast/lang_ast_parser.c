@@ -9,13 +9,13 @@ lang_ast_node* _new_node(lang_ast_parser const* parser, lang_ast_type type) {
 
 	lang_ast_node* result;
 	switch (type) {
-	#define LANG_AST_NODE(NAME, MEMBERS)        \
-	    case LANG_AST_TAG(NAME):                \
+	#define LANG_AST_NODE(NAME, MEMBERS)            \
+	    case LANG_AST_TAG(NAME):                    \
 	        result = parser->allocator.alloc(       \
 	            parser->allocator.userdata,         \
-	            sizeof(LANG_AST_STRUCT(NAME))   \
-	        );                                  \
-	        memset(&result->as_##NAME, 0, sizeof(result->as_##NAME)); \
+	            sizeof(LANG_AST_STRUCT(NAME))       \
+	        );                                      \
+	        memset(&result->as_##NAME, 0, sizeof(LANG_AST_STRUCT(NAME))); \
 	        break;
 
 	#include "lang_ast_nodes.txt"
@@ -98,6 +98,15 @@ static lang_ast_node* _append_value(lang_ast_node* current, lang_ast_node* node)
 }
 
 // Parser interface
+
+static void _lang_ast_add_comment(lang_parser* parser, lang_token const* value) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	if(p->flags & lang_ast_parser_flag_include_comments) {
+		lang_ast_node* node = _new_node(p, lang_ast_type_comment);
+		node->as_comment.value = *value;
+		lang_insert_after(p->current, node);
+	}
+}
 
 static void _lang_ast_begin_subexpression(lang_parser* parser, lang_token const* token) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
@@ -258,7 +267,12 @@ lang_ast_parser lang_create_parser_ast(lang_alloc_callbacks alloc, unsigned lang
 
 	result.allocator = alloc;
 
-	result.parser = lang_parser_defaults(lang_parser_defaults_print_errors);
+	result.flags = lang_ast_parser_flags;
+
+	result.parser = lang_parser_defaults(
+		(lang_ast_parser_flags & lang_ast_parser_flag_print_errors)?
+			lang_parser_defaults_print_errors : 0
+	);
 
 	result.parser.pfnBeginSubexpression = _lang_ast_begin_subexpression;
 	result.parser.pfnEndSubexpression   = _lang_ast_end_subexpression;

@@ -1,3 +1,7 @@
+LANG_AST_NODE(comment,
+	lang_token value;
+)
+
 LANG_AST_NODE(scope,
 	lang_ast_node* content;
 )

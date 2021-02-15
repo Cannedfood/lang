@@ -30,6 +30,9 @@ lang_buffer readFile(const char* path) {
 void printAst(lang_ast_node* node, int indentN, int depth) {
 	while(node) {
 		switch (node->type) {
+		case lang_ast_type_comment:
+			printf("%*scomment %.*s\n", depth, "", node->as_comment.value.length, node->as_comment.value.text);
+		break;
 		case lang_ast_type_scope:
 			printf("%*sscope\n", depth, "");
 			printAst(node->as_scope.content, indentN, depth + indentN);
@@ -105,10 +108,9 @@ void parseFile(const char* filepath) {
 	lang_allocator* allocator = lang_new_allocator();
 
 	lang_tokenizer  tokenizer = lang_tokenizer_create(fileContents.data, fileContents.length, filepath);
-	lang_alloc_callbacks alloc = lang_alloc_callbacks_for(allocator);
 
-	alloc.alloc(alloc.userdata, 32);
-	lang_ast_parser parser    = lang_create_parser_ast(alloc, 0);
+	lang_alloc_callbacks alloc  = lang_alloc_callbacks_for(allocator);
+	lang_ast_parser      parser = lang_create_parser_ast(alloc, 0);
 	lang_parser_parse(&parser.parser, &tokenizer);
 
 	printAst(parser.root->as_scope.content, 4, 0);
