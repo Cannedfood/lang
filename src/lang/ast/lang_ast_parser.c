@@ -55,7 +55,7 @@ static lang_ast_node* _associated_expression(lang_ast_node* from, int precedence
 	}
 }
 
-static lang_ast_node* _walk_up_to(lang_ast_node* from, lang_ast_type type) {
+static lang_ast_node* _lang_ast_find(lang_ast_node* from, lang_ast_type type) {
 	while(from->type != type) {
 		assert(from->parent);
 		from = from->parent;
@@ -64,7 +64,7 @@ static lang_ast_node* _walk_up_to(lang_ast_node* from, lang_ast_type type) {
 }
 
 static lang_ast_node* _walk_out_of(lang_ast_node* from, lang_ast_type type) {
-	from = _walk_up_to(from, type);
+	from = _lang_ast_find(from, type);
 	assert(from->parent);
 	return from->parent;
 }
@@ -73,12 +73,36 @@ static int _lang_is_block(lang_ast_type type) {
 	return type == lang_ast_type_block || type == lang_ast_type_function || type == lang_ast_type_class;
 }
 
-static void _pop_block(lang_ast_parser* parser, lang_ast_type blockType) {
-	parser->current = _walk_up_to(parser->current, blockType);
-	parser->current = parser->current->parent;
-	while(!_lang_is_block(parser->current->type)) {
-		assert(parser->current->parent);
-		parser->current = parser->current->parent;
+static lang_ast_node* _parent_block(lang_ast_node* node) {
+	do {
+		assert(node->parent);
+		node = node->parent;
+	} while(!_lang_is_block(node->type));
+	return node;
+}
+
+static void _simplify_block(lang_ast_parser* p, lang_ast_node* node) {
+	if(node == NULL) return;
+
+	assert(node->type == lang_ast_type_block);
+	if(!node->as_block.content) { // no content: can be removed
+		p->allocator.free(p->allocator.userdata, lang_ast_remove(node));
+	}
+	else if(!node->as_block.content->next) { // one child: just replace with child
+		lang_ast_replace(node, node->as_block.content);
+		p->allocator.free(p->allocator.userdata, node);
+	}
+}
+static void _simplify_expression(lang_ast_parser* p, lang_ast_node* node) {
+	if(node == NULL) return;
+
+	assert(node->type == lang_ast_type_expression);
+	if(!node->as_expression.children) { // no content: can be removed
+		p->allocator.free(p->allocator.userdata, lang_ast_remove(node));
+	}
+	else if(!node->as_expression.children->next) { // one child: just replace with child
+		lang_ast_replace(node, node->as_expression.children);
+		p->allocator.free(p->allocator.userdata, node);
 	}
 }
 
@@ -122,7 +146,11 @@ static void _lang_ast_begin_subexpression(lang_parser* parser, lang_token const*
 }
 static void _lang_ast_end_subexpression(lang_parser* parser, lang_token const* token) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
+
+	lang_ast_node* expression = _lang_ast_find(p->current, lang_ast_type_expression);
 	p->current = _walk_out_of(p->current, lang_ast_type_expression);
+
+	_simplify_expression(p, expression);
 }
 static void _lang_ast_binop(lang_parser* parser, lang_token const* op) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
@@ -162,7 +190,7 @@ static void _lang_ast_begin_call(lang_parser* parser, lang_token const* where) {
 }
 static void _lang_ast_next_call_argument(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-	p->current = _walk_up_to(p->current, lang_ast_type_call);
+	p->current = _lang_ast_find(p->current, lang_ast_type_call);
 
 	lang_ast_node* arg = _new_node(p, lang_ast_type_expression);
 	lang_ast_append(p->current, &p->current->as_call.arguments, arg);
@@ -170,21 +198,12 @@ static void _lang_ast_next_call_argument(lang_parser* parser, lang_token const* 
 }
 static void _lang_ast_end_call(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-	p->current = _walk_up_to(p->current, lang_ast_type_call);
+	p->current = _lang_ast_find(p->current, lang_ast_type_call);
 
-	// Clean up unnecessary expression nodes
+	// Simplify arguments
 	lang_ast_node* arg = p->current->as_call.arguments;
 	while(arg) {
-		if(
-			arg->type == lang_ast_type_expression &&
-			arg->as_expression.children &&
-			!arg->as_expression.children->next)
-		{
-			lang_ast_node* arg_value = lang_ast_remove(arg->as_expression.children);
-			p->allocator.free(p->allocator.userdata,
-				lang_ast_replace(arg, arg_value)
-			);
-		}
+		_simplify_expression(p, arg);
 		arg = arg->next;
 	}
 }
@@ -217,7 +236,9 @@ static void _lang_ast_add_func_argument(lang_parser* parser, lang_token const* n
 	lang_ast_append(p->current, &p->current->as_function.arguments, arg);
 }
 static void _lang_ast_end_function(lang_parser* parser, lang_token const* token) {
-	_pop_block((lang_ast_parser*)parser, lang_ast_type_function);
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+
+	p->current = _parent_block(_lang_ast_find(p->current, lang_ast_type_function));
 }
 static void _lang_ast_next_statement(lang_parser* parser) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
@@ -258,7 +279,9 @@ static void _lang_ast_begin_class(lang_parser* parser, lang_token const* where) 
 	);
 }
 static void _lang_ast_end_class(lang_parser* parser, lang_token const* token) {
-	_pop_block((lang_ast_parser*)parser, lang_ast_type_class);
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+
+	p->current = _parent_block(_lang_ast_find(p->current, lang_ast_type_class));
 }
 
 
@@ -278,7 +301,7 @@ static void _lang_ast_if_body(lang_parser* parser) {
 
 	lang_ast_node* if_true = _new_node(p, lang_ast_type_block);
 
-	p->current = _walk_up_to(p->current, lang_ast_type_if);
+	p->current = _lang_ast_find(p->current, lang_ast_type_if);
 	lang_ast_append(p->current, &p->current->as_if.if_true, if_true);
 	p->current = if_true;
 }
@@ -287,13 +310,19 @@ static void _lang_ast_else(lang_parser* parser, lang_token const* where) {
 
 	lang_ast_node* if_false = _new_node(p, lang_ast_type_block);
 
-	p->current = _walk_up_to(p->current, lang_ast_type_if);
+	p->current = _lang_ast_find(p->current, lang_ast_type_if);
 	lang_ast_append(p->current, &p->current->as_if.if_false, if_false);
 	p->current = if_false;
 }
 static void _lang_ast_end_if(lang_parser* parser) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-	p->current = _walk_out_of(p->current, lang_ast_type_if);
+
+	lang_ast_node* if_stmt = _lang_ast_find(p->current, lang_ast_type_if);
+	_simplify_expression(p, if_stmt->as_if.condition);
+	_simplify_block(p, if_stmt->as_if.if_true);
+	_simplify_block(p, if_stmt->as_if.if_false);
+
+	p->current = _parent_block(if_stmt);
 }
 
 LANG_AST_API

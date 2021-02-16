@@ -329,7 +329,6 @@ void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
 		_lang_next_token(parser, tokens);
 	}
 	else if(tokens->current.type == lang_token_if) {
-		puts("If");
 		_lang_parse_if_else(parser, tokens);
 	}
 	else if(tokens->current.type == lang_token_class) {

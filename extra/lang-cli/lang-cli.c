@@ -31,6 +31,15 @@ void printAst(lang_ast_node* node, int indentN, int depth) {
 	while(node) {
 		switch (node->type) {
 		case lang_ast_type_if:
+			printf("%*sif\n", depth, "");
+			printAst(node->as_if.condition, indentN, depth + indentN);
+			printf("%*sthen\n", depth, "");
+			printAst(node->as_if.if_true, indentN, depth + indentN);
+			if(node->as_if.if_false) {
+				printf("%*selse:\n", depth, "");
+				printAst(node->as_if.if_false, indentN, depth + indentN);
+			}
+			break;
 		case lang_ast_type_comment:
 			printf("%*scomment %.*s\n", depth, "", node->as_comment.value.length, node->as_comment.value.text);
 		break;
@@ -69,7 +78,7 @@ void printAst(lang_ast_node* node, int indentN, int depth) {
 			printf("%*scall\n", depth, "");
 			printAst(node->as_call.target, indentN, depth + indentN);
 			if(node->as_call.arguments) {
-				printf("%*s arguments:\n", depth, "");
+				printf("%*swith arguments:\n", depth, "");
 				printAst(node->as_call.arguments, indentN, depth + indentN);
 			}
 		break;

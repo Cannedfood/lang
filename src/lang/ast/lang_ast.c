@@ -18,6 +18,8 @@ lang_ast_node** _lang_last_next_pointer(lang_ast_node** list) {
 }
 
 LANG_AST_API void lang_ast_append (lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement) {
+	lang_ast_remove(newElement);
+
 	lang_ast_node** p = _lang_last_next_pointer(list);
 	newElement->parent = parent;
 	newElement->self = p;
@@ -30,22 +32,30 @@ LANG_AST_API void lang_ast_prepend(lang_ast_node* parent, lang_ast_node** list, 
 
 	lang_ast_remove(newElement);
 
-	lang_ast_node* next = *list;
-	*list = newElement;
 	newElement->parent = parent;
-	// TODO
+	newElement->next   = *list;
+	newElement->self   = list;
+
+	*newElement->self = newElement;
+	if(newElement->next) {
+		newElement->next->self = &newElement->next;
+	}
 }
 LANG_AST_API void lang_insert_after(lang_ast_node* where, lang_ast_node* node) {
 	assert(where);
 	assert(where->self&&"lang_insert_after: 'where' argument must be in a list!");
 	assert(node);
 	lang_ast_remove(node);
+
+	assert(!"Unimplemented");
 }
 LANG_AST_API void lang_insert_before(lang_ast_node* where, lang_ast_node* node) {
 	assert(where);
 	assert(where->self&&"lang_insert_before: 'where' argument must be in a list!");
 	assert(node);
 	lang_ast_remove(node);
+
+	assert(!"Unimplemented");
 }
 LANG_AST_API lang_ast_node* lang_ast_remove (lang_ast_node* node) {
 	assert(node);
@@ -57,6 +67,8 @@ LANG_AST_API lang_ast_node* lang_ast_remove (lang_ast_node* node) {
 	return node;
 }
 LANG_AST_API lang_ast_node* lang_ast_replace(lang_ast_node* target, lang_ast_node* with) {
+	lang_ast_remove(with);
+
 	with->parent = target->parent;
 	with->self   = target->self;
 	with->next   = target->next;

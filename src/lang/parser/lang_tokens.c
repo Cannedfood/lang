@@ -16,18 +16,6 @@ typedef lang_token_type  token_type;
 typedef lang_token       token;
 typedef lang_tokenizer tokenizer;
 
-static inline int _lang_is_numeric(int c) {
-	return
-		(c >= '0' && c <= '9') ||
-		c == '.';
-}
-
-static inline int _lang_is_name(int c) {
-	return
-		(c >= 'a' && c <= 'z') ||
-		(c >= 'A' && c <= 'Z');
-}
-
 static
 void _lang_tokenizer_skip_over_token(lang_token* token, const char* fileEnd) {
 	// Add number of lines in token to token->lines
@@ -204,16 +192,16 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 		token->length = _lang_tokenizer_end_of_string_literal(token->text, fileEnd) - token->text;
 	}
 	// Number
-	else if(_lang_is_numeric(token->text[0])) {
+	else if(lang_is_numeric_char(token->text[0])) {
 		token->type = lang_token_number;
 		token->length = 1;
-		while((token->text + token->length) < fileEnd && _lang_is_numeric(token->text[token->length]))
+		while((token->text + token->length) < fileEnd && lang_is_numeric_char(token->text[token->length]))
 			token->length++;
 	}
-	else if(_lang_is_name(token->text[0])) {
+	else if(lang_is_name_char(token->text[0])) {
 		token->type = lang_token_name;
 		token->length = 1;
-		while((token->text + token->length) < fileEnd && _lang_is_name(token->text[token->length]))
+		while((token->text + token->length) < fileEnd && lang_is_name_char(token->text[token->length]))
 			token->length++;
 	}
 	else {
