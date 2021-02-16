@@ -42,12 +42,22 @@ lang_token _lang_next_token(lang_parser* parser, lang_tokenizer* tokens) {
 }
 
 static inline
-lang_token _lang_next_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_token_type expected, const char* msg) {
+int _lang_next_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_token_type expected, const char* msg) {
 	_lang_next_token(parser, tokens);
 	if(tokens->current.type != expected) {
 		_lang_parser_error(msg, parser, &tokens->current);
 	}
-	return tokens->current;
+	return tokens->current.type == expected;
+}
+
+static inline
+int _lang_skip_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_token_type expected, const char* msg) {
+	_lang_next_token(parser, tokens);
+	if(tokens->current.type != expected)
+		_lang_parser_error(msg, parser, &tokens->current);
+	else
+		_lang_next_token(parser, tokens);
+	return tokens->current.type == expected;
 }
 
 static void _lang_parse_function(lang_parser* parser, lang_tokenizer* tokens);
@@ -90,6 +100,7 @@ void _lang_parse_function_body(lang_parser* parser, lang_tokenizer* tokens) {
 
 	_lang_next_token(parser, tokens);
 	while(tokens->current.type != lang_token_close_curly && tokens->current.type != lang_token_end_of_file) {
+		parser->pfnNextStatement(parser);
 		_lang_parse_statement(parser, tokens);
 	}
 	_lang_next_token(parser, tokens);
@@ -137,9 +148,9 @@ static
 void _lang_parse_class_definition(lang_parser* parser, lang_tokenizer* tokens) {
 	assert(tokens->current.type == lang_token_class);
 
-	lang_token className = _lang_next_token_expect(parser, tokens, lang_token_name, "Expected class name");
+	_lang_next_token_expect(parser, tokens, lang_token_name, "Expected class name");
 
-	parser->pfnDeclare(parser, &className);
+	parser->pfnDeclare(parser, &tokens->current);
 
 	WRITE("class %.*s {\n", className.length, className.text);
 
@@ -189,9 +200,12 @@ void _lang_parse_function_call(lang_parser* parser, lang_tokenizer* tokens) {
 static
 int _lang_parse_closed_expression(lang_parser* parser, lang_tokenizer* tokens) {
 	if(
+		tokens->current.type == lang_token_name ||
 		tokens->current.type == lang_token_string_literal ||
 		tokens->current.type == lang_token_number ||
-		tokens->current.type == lang_token_name)
+		tokens->current.type == lang_token_true ||
+		tokens->current.type == lang_token_false ||
+		tokens->current.type == lang_token_null)
 	{
 		parser->pfnValue(parser, &tokens->current);
 		_lang_next_token(parser, tokens);
@@ -201,7 +215,7 @@ int _lang_parse_closed_expression(lang_parser* parser, lang_tokenizer* tokens) {
 		parser->pfnBeginSubexpression(parser, &tokens->current);
 		_lang_next_token(parser, tokens);
 		_lang_parse_expression(parser, tokens, 0);
-		_lang_next_token_expect(parser, tokens, lang_token_close_parenthesis, "Expected closing brace ')'");
+		_lang_skip_token_expect(parser, tokens, lang_token_close_parenthesis, "Expected closing brace ')'");
 		parser->pfnEndSubexpression(parser, &tokens->current);
 		return 1;
 	}
@@ -280,9 +294,31 @@ void _lang_parse_declaration(lang_parser* parser, lang_tokenizer* tokens) {
 }
 
 static
-void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
-	parser->pfnNextStatement(parser);
+void _lang_parse_if_else(lang_parser* parser, lang_tokenizer* tokens) {
+	assert(tokens->current.type == lang_token_if);
 
+	parser->pfnIf(parser, &tokens->current);
+
+	// Condition
+	_lang_skip_token_expect(parser, tokens, lang_token_open_parenthesis, "Expected opening paranthesis '(' after if");
+	_lang_parse_expression(parser, tokens, 0);
+	_lang_skip_token_expect(parser, tokens, lang_token_close_parenthesis, "Expected closing paranthesis ')' at the end of if condition");
+
+	// Body
+	parser->pfnIfBody(parser);
+	_lang_parse_statement(parser, tokens);
+
+	// else
+	if(tokens->current.type == lang_token_else) {
+		parser->pfnElse(parser, &tokens->current);
+		_lang_next_token(parser, tokens);
+		_lang_parse_statement(parser, tokens);
+	}
+	parser->pfnEndIf(parser);
+}
+
+static
+void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
 	if(tokens->current.type == lang_token_def) {
 		WRITE("\n\t");
 		_lang_parse_declaration(parser, tokens);
@@ -291,6 +327,10 @@ void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
 			_lang_parser_error("Expected end of statement ';' after this expression", parser, &tokens->current);
 		}
 		_lang_next_token(parser, tokens);
+	}
+	else if(tokens->current.type == lang_token_if) {
+		puts("If");
+		_lang_parse_if_else(parser, tokens);
 	}
 	else if(tokens->current.type == lang_token_class) {
 		_lang_parse_class_definition(parser, tokens);
@@ -311,6 +351,7 @@ void lang_parser_parse(lang_parser* parser, lang_tokenizer* tokens) {
 	_lang_next_token(parser, tokens); // Get first token
 
 	while(tokens->current.type != lang_token_end_of_file) {
+		parser->pfnNextStatement(parser);
 		_lang_parse_statement(parser, tokens);
 	}
 }

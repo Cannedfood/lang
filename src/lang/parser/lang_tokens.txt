@@ -6,6 +6,13 @@ LANG_TOKEN(pub),
 LANG_TOKEN(get),
 LANG_TOKEN(set),
 
+LANG_TOKEN(if),
+LANG_TOKEN(else),
+
+LANG_TOKEN(true),
+LANG_TOKEN(false),
+LANG_TOKEN(null),
+
 // Parantheses
 LANG_TOKEN(open_parenthesis), LANG_TOKEN(close_parenthesis),
 LANG_TOKEN(open_bracket), LANG_TOKEN(close_bracket),

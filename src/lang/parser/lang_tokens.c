@@ -190,6 +190,13 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	else KEYWORD("get",   lang_token_get)
 	else KEYWORD("set",   lang_token_set)
 	else KEYWORD("new",   lang_token_new)
+
+	else KEYWORD("if",    lang_token_if)
+	else KEYWORD("else",  lang_token_else)
+
+	else KEYWORD("true",  lang_token_true)
+	else KEYWORD("false", lang_token_false)
+	else KEYWORD("null",  lang_token_null)
 	#undef TOKEN
 	// Quote
 	else if(lang_starts_with_e("\"", token->text, fileEnd) || lang_starts_with_e("'", token->text, fileEnd)) {

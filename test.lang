@@ -11,3 +11,10 @@ def mybird = bird();
 mybird.weight = 32;
 
 mybird.fly("my birds's " + "home");
+
+if(true)
+	print("Hey");
+else if(false)
+	print("Ho");
+else
+	print("Hi");

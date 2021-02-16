@@ -69,22 +69,22 @@ static lang_ast_node* _walk_out_of(lang_ast_node* from, lang_ast_type type) {
 	return from->parent;
 }
 
-static int _lang_is_scope(lang_ast_type type) {
-	return type == lang_ast_type_scope || type == lang_ast_type_function || type == lang_ast_type_class;
+static int _lang_is_block(lang_ast_type type) {
+	return type == lang_ast_type_block || type == lang_ast_type_function || type == lang_ast_type_class;
 }
 
-static void _pop_scope(lang_ast_parser* parser, lang_ast_type scopeType) {
-	parser->current = _walk_up_to(parser->current, scopeType);
+static void _pop_block(lang_ast_parser* parser, lang_ast_type blockType) {
+	parser->current = _walk_up_to(parser->current, blockType);
 	parser->current = parser->current->parent;
-	while(!_lang_is_scope(parser->current->type)) {
+	while(!_lang_is_block(parser->current->type)) {
 		assert(parser->current->parent);
 		parser->current = parser->current->parent;
 	}
 }
 
 static lang_ast_node* _append_value(lang_ast_node* current, lang_ast_node* node) {
-	if(_lang_is_scope(current->type))
-		lang_ast_append(current, &current->as_scope.content, node);
+	if(_lang_is_block(current->type))
+		lang_ast_append(current, &current->as_block.content, node);
 	else if(current->type == lang_ast_type_binop)
 		lang_ast_append(current, &current->as_binop.right, node);
 	else if(current->type == lang_ast_type_expression)
@@ -112,8 +112,8 @@ static void _lang_ast_begin_subexpression(lang_parser* parser, lang_token const*
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
 	lang_ast_node* node = _new_node(p, lang_ast_type_expression);
-	if(_lang_is_scope(p->current->type)) {
-		lang_ast_append(p->current, &p->current->as_scope.content, node);
+	if(_lang_is_block(p->current->type)) {
+		lang_ast_append(p->current, &p->current->as_block.content, node);
 		p->current = node;
 	}
 	else {
@@ -130,8 +130,8 @@ static void _lang_ast_binop(lang_parser* parser, lang_token const* op) {
 	lang_ast_node* binop = _new_node(p, lang_ast_type_binop);
 	binop->as_binop.op = *op;
 
-	if(_lang_is_scope(p->current->type)) {
-		lang_ast_append(p->current, &p->current->as_scope.content, binop);
+	if(_lang_is_block(p->current->type)) {
+		lang_ast_append(p->current, &p->current->as_block.content, binop);
 		p->current = binop;
 	}
 	else if(p->current->type == lang_ast_type_value || p->current->type == lang_ast_type_binop) {
@@ -217,11 +217,11 @@ static void _lang_ast_add_func_argument(lang_parser* parser, lang_token const* n
 	lang_ast_append(p->current, &p->current->as_function.arguments, arg);
 }
 static void _lang_ast_end_function(lang_parser* parser, lang_token const* token) {
-	_pop_scope((lang_ast_parser*)parser, lang_ast_type_function);
+	_pop_block((lang_ast_parser*)parser, lang_ast_type_function);
 }
 static void _lang_ast_next_statement(lang_parser* parser) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-	while(!_lang_is_scope(p->current->type)) {
+	while(!_lang_is_block(p->current->type)) {
 		assert(p->current->parent);
 		p->current = p->current->parent;
 	}
@@ -230,10 +230,10 @@ static void _lang_ast_next_statement(lang_parser* parser) {
 static void _lang_ast_declare(lang_parser* parser, lang_token const* name) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	assert(_lang_is_scope(p->current->type));
+	assert(_lang_is_block(p->current->type));
 
 	lang_ast_node* declaration = _new_node(p, lang_ast_type_declaration);
-	lang_ast_append(p->current, &p->current->as_scope.content, declaration);
+	lang_ast_append(p->current, &p->current->as_block.content, declaration);
 	declaration->as_declaration.name = *name;
 
 	p->current = declaration;
@@ -241,9 +241,9 @@ static void _lang_ast_declare(lang_parser* parser, lang_token const* name) {
 static void _lang_ast_init_declaration(lang_parser* parser) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	assert(_lang_is_scope(p->current->type));
+	assert(_lang_is_block(p->current->type));
 
-	lang_ast_node* last = lang_ast_last(p->current->as_scope.content);
+	lang_ast_node* last = lang_ast_last(p->current->as_block.content);
 	assert(last);
 	assert(last->type == lang_ast_type_declaration);
 	p->current = last;
@@ -258,7 +258,42 @@ static void _lang_ast_begin_class(lang_parser* parser, lang_token const* where) 
 	);
 }
 static void _lang_ast_end_class(lang_parser* parser, lang_token const* token) {
-	_pop_scope((lang_ast_parser*)parser, lang_ast_type_class);
+	_pop_block((lang_ast_parser*)parser, lang_ast_type_class);
+}
+
+
+static void _lang_ast_if(lang_parser* parser, lang_token const* where) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	assert(_lang_is_block(p->current->type));
+	lang_ast_node* if_stmt = _new_node(p, lang_ast_type_if);
+	lang_ast_append(p->current, &p->current->as_block.content, if_stmt);
+
+	lang_ast_node* condition = _new_node(p, lang_ast_type_expression);
+	lang_ast_append(if_stmt, &if_stmt->as_if.condition, condition);
+
+	p->current = condition;
+}
+static void _lang_ast_if_body(lang_parser* parser) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+
+	lang_ast_node* if_true = _new_node(p, lang_ast_type_block);
+
+	p->current = _walk_up_to(p->current, lang_ast_type_if);
+	lang_ast_append(p->current, &p->current->as_if.if_true, if_true);
+	p->current = if_true;
+}
+static void _lang_ast_else(lang_parser* parser, lang_token const* where) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+
+	lang_ast_node* if_false = _new_node(p, lang_ast_type_block);
+
+	p->current = _walk_up_to(p->current, lang_ast_type_if);
+	lang_ast_append(p->current, &p->current->as_if.if_false, if_false);
+	p->current = if_false;
+}
+static void _lang_ast_end_if(lang_parser* parser) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	p->current = _walk_out_of(p->current, lang_ast_type_if);
 }
 
 LANG_AST_API
@@ -289,9 +324,13 @@ lang_ast_parser lang_create_parser_ast(lang_alloc_callbacks alloc, unsigned lang
 	result.parser.pfnInitDeclaration    = _lang_ast_init_declaration;
 	result.parser.pfnBeginClass         = _lang_ast_begin_class;
 	result.parser.pfnEndClass           = _lang_ast_end_class;
+	result.parser.pfnIf                 = _lang_ast_if;
+	result.parser.pfnIfBody             = _lang_ast_if_body;
+	result.parser.pfnElse               = _lang_ast_else;
+	result.parser.pfnEndIf              = _lang_ast_end_if;
 
 
-	result.root    = _new_node(&result, lang_ast_type_scope);
+	result.root    = _new_node(&result, lang_ast_type_block);
 	result.current = result.root;
 
 	return result;

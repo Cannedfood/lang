@@ -2,16 +2,16 @@ LANG_AST_NODE(comment,
 	lang_token value;
 )
 
-LANG_AST_NODE(scope,
+LANG_AST_NODE(block,
 	lang_ast_node* content;
 )
 
 LANG_AST_NODE(class,
-	lang_ast_node* content; // scope->content
+	lang_ast_node* content; // block->content
 )
 
 LANG_AST_NODE(function,
-	lang_ast_node* content; // scope->content
+	lang_ast_node* content; // block->content
 	lang_ast_node* arguments; // Should all be variables
 )
 
@@ -20,9 +20,16 @@ LANG_AST_NODE(declaration,
 	lang_ast_node* initial_value;
 )
 
-LANG_AST_NODE(expression,
+LANG_AST_NODE(if,
+	lang_ast_node* condition;
+	lang_ast_node* if_true;  // block->content
+	lang_ast_node* if_false; // block->content
 	lang_token where;
+)
+
+LANG_AST_NODE(expression,
 	lang_ast_node* children;
+	lang_token where;
 )
 
 LANG_AST_NODE(binop,
@@ -32,8 +39,8 @@ LANG_AST_NODE(binop,
 )
 
 LANG_AST_NODE(unop,
-	lang_token op;
 	lang_ast_node* expression;
+	lang_token op;
 )
 
 LANG_AST_NODE(call,

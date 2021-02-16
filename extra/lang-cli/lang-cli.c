@@ -30,22 +30,23 @@ lang_buffer readFile(const char* path) {
 void printAst(lang_ast_node* node, int indentN, int depth) {
 	while(node) {
 		switch (node->type) {
+		case lang_ast_type_if:
 		case lang_ast_type_comment:
 			printf("%*scomment %.*s\n", depth, "", node->as_comment.value.length, node->as_comment.value.text);
 		break;
-		case lang_ast_type_scope:
-			printf("%*sscope\n", depth, "");
-			printAst(node->as_scope.content, indentN, depth + indentN);
+		case lang_ast_type_block:
+			printf("%*sblock\n", depth, "");
+			printAst(node->as_block.content, indentN, depth + indentN);
 		break;
 		case lang_ast_type_class:
 			printf("%*sclass\n", depth, "");
-			printAst(node->as_scope.content, indentN, depth + indentN);
+			printAst(node->as_block.content, indentN, depth + indentN);
 		break;
 		case lang_ast_type_function:
 			printf("%*sfunction\n", depth, "");
 			printAst(node->as_function.arguments, indentN, depth + indentN);
 			printf("%*s body:\n", depth, "");
-			printAst(node->as_scope.content, indentN, depth + indentN);
+			printAst(node->as_block.content, indentN, depth + indentN);
 		break;
 		case lang_ast_type_declaration:
 			printf("%*sdef %.*s\n", depth, "", node->as_declaration.name.length, node->as_declaration.name.text);
@@ -113,7 +114,7 @@ void parseFile(const char* filepath) {
 	lang_ast_parser      parser = lang_create_parser_ast(alloc, 0);
 	lang_parser_parse(&parser.parser, &tokenizer);
 
-	printAst(parser.root->as_scope.content, 4, 0);
+	printAst(parser.root->as_block.content, 4, 0);
 
 	lang_free_allocator(allocator);
 

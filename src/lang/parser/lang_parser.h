@@ -27,6 +27,14 @@ struct lang_parser {
 
 	// -- Statements --
 	void(*pfnNextStatement)(lang_parser* p);
+	// blocks
+	void(*pfnIf)(lang_parser* p, lang_token const* where);
+	void(*pfnIfBody)(lang_parser* p);
+	void(*pfnElse)(lang_parser* p, lang_token const* where);
+	void(*pfnEndIf)(lang_parser* p);
+
+	void(*pfnBeginBlock)(lang_parser* p, lang_token const* where);
+	void(*pfnEndBlock)  (lang_parser* p, lang_token const* where);
 	// declarations
 	void(*pfnDeclare)(lang_parser* p, lang_token const* name);
 	void(*pfnInitDeclaration)(lang_parser* p);
