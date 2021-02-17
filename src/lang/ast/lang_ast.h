@@ -49,10 +49,10 @@ union lang_ast_node {
 	#undef LANG_AST_NODE
 };
 
-LANG_AST_API void           lang_ast_append (lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement);
-LANG_AST_API void           lang_ast_prepend(lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement);
+LANG_AST_API lang_ast_node* lang_ast_append (lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement);
+LANG_AST_API lang_ast_node* lang_ast_prepend(lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement);
 LANG_AST_API void           lang_insert_after(lang_ast_node* where, lang_ast_node* node);
 LANG_AST_API void           lang_insert_before(lang_ast_node* where, lang_ast_node* node);
 LANG_AST_API lang_ast_node* lang_ast_remove (lang_ast_node*);
 LANG_AST_API lang_ast_node* lang_ast_replace(lang_ast_node* target, lang_ast_node* with);
-LANG_AST_API lang_ast_node* lang_ast_last(lang_ast_node* list);
+LANG_AST_API lang_ast_node* lang_ast_last_sibling(lang_ast_node* list);

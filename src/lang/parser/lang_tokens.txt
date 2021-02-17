@@ -1,33 +1,37 @@
 // Keywords
 LANG_TOKEN(class),
 LANG_TOKEN(def),
-LANG_TOKEN(new),
 LANG_TOKEN(pub),
 LANG_TOKEN(get),
 LANG_TOKEN(set),
 
+// Flow control
 LANG_TOKEN(if),
 LANG_TOKEN(else),
 
+LANG_TOKEN(while),
+LANG_TOKEN(for),
+LANG_TOKEN(in),
+
+// Literals
 LANG_TOKEN(true),
 LANG_TOKEN(false),
 LANG_TOKEN(null),
+LANG_TOKEN(number),
+LANG_TOKEN(string_literal),
+
+// Name
+LANG_TOKEN(name),
 
 // Parantheses
 LANG_TOKEN(open_parenthesis), LANG_TOKEN(close_parenthesis),
 LANG_TOKEN(open_bracket), LANG_TOKEN(close_bracket),
 LANG_TOKEN(open_curly), LANG_TOKEN(close_curly),
 
-// Blocks (for potential indention based syntax)
-LANG_TOKEN(enter_block),  LANG_TOKEN(exit_block),
-
-// Operators
+// Binop
 LANG_TOKEN(dot),
 
 LANG_TOKEN(assign),
-
-LANG_TOKEN(comma),
-LANG_TOKEN(colon),
 
 LANG_TOKEN(equals),     LANG_TOKEN(not_equals),
 LANG_TOKEN(less),       LANG_TOKEN(greater),
@@ -36,14 +40,13 @@ LANG_TOKEN(less_equal), LANG_TOKEN(greater_equal),
 LANG_TOKEN(plus),        LANG_TOKEN(minus),        LANG_TOKEN(div),        LANG_TOKEN(mul),
 LANG_TOKEN(plus_assign), LANG_TOKEN(minus_assign), LANG_TOKEN(div_assign), LANG_TOKEN(mul_assign),
 
-LANG_TOKEN(string_literal),
-
+// Symbols
+LANG_TOKEN(comma),
+LANG_TOKEN(colon),
 LANG_TOKEN(end_stmt),
 
 // Other
 LANG_TOKEN(line_comment),
 LANG_TOKEN(block_comment),
-LANG_TOKEN(name),
-LANG_TOKEN(number),
 LANG_TOKEN(end_of_file),
 LANG_TOKEN(unexpected_character),

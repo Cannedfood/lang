@@ -70,7 +70,13 @@ static lang_ast_node* _walk_out_of(lang_ast_node* from, lang_ast_type type) {
 }
 
 static int _lang_is_block(lang_ast_type type) {
-	return type == lang_ast_type_block || type == lang_ast_type_function || type == lang_ast_type_class;
+	return
+		type == lang_ast_type_block ||
+		type == lang_ast_type_function ||
+		type == lang_ast_type_class ||
+		type == lang_ast_type_while ||
+		type == lang_ast_type_for ||
+		type == lang_ast_type_foreach;
 }
 
 static lang_ast_node* _parent_block(lang_ast_node* node) {
@@ -85,11 +91,11 @@ static void _simplify_block(lang_ast_parser* p, lang_ast_node* node) {
 	if(node == NULL) return;
 
 	assert(node->type == lang_ast_type_block);
-	if(!node->as_block.content) { // no content: can be removed
+	if(!node->as_block.body) { // no content: can be removed
 		p->allocator.free(p->allocator.userdata, lang_ast_remove(node));
 	}
-	else if(!node->as_block.content->next) { // one child: just replace with child
-		lang_ast_replace(node, node->as_block.content);
+	else if(!node->as_block.body->next) { // one child: just replace with child
+		lang_ast_replace(node, node->as_block.body);
 		p->allocator.free(p->allocator.userdata, node);
 	}
 }
@@ -108,7 +114,7 @@ static void _simplify_expression(lang_ast_parser* p, lang_ast_node* node) {
 
 static lang_ast_node* _append_value(lang_ast_node* current, lang_ast_node* node) {
 	if(_lang_is_block(current->type))
-		lang_ast_append(current, &current->as_block.content, node);
+		lang_ast_append(current, &current->as_block.body, node);
 	else if(current->type == lang_ast_type_binop)
 		lang_ast_append(current, &current->as_binop.right, node);
 	else if(current->type == lang_ast_type_expression)
@@ -116,7 +122,7 @@ static lang_ast_node* _append_value(lang_ast_node* current, lang_ast_node* node)
 	else if(current->type == lang_ast_type_declaration)
 		lang_ast_append(current, &current->as_declaration.initial_value, node);
 	else
-		assert(!"Invalid location for value"); // I'm tired and drunk, so take this message or leave it.
+		assert(!"Invalid location for value");
 
 	return node;
 }
@@ -136,13 +142,10 @@ static void _lang_ast_begin_subexpression(lang_parser* parser, lang_token const*
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
 	lang_ast_node* node = _new_node(p, lang_ast_type_expression);
-	if(_lang_is_block(p->current->type)) {
-		lang_ast_append(p->current, &p->current->as_block.content, node);
-		p->current = node;
-	}
-	else {
-		// TODO, skip for now
-	}
+	if(_lang_is_block(p->current->type))
+		p->current = lang_ast_append(p->current, &p->current->as_block.body, node);
+	else
+		p->current = _append_value(p->current, node);
 }
 static void _lang_ast_end_subexpression(lang_parser* parser, lang_token const* token) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
@@ -159,12 +162,10 @@ static void _lang_ast_binop(lang_parser* parser, lang_token const* op) {
 	binop->as_binop.op = *op;
 
 	if(_lang_is_block(p->current->type)) {
-		lang_ast_append(p->current, &p->current->as_block.content, binop);
-		p->current = binop;
+		p->current = lang_ast_append(p->current, &p->current->as_block.body, binop);
 	}
 	else if(p->current->type == lang_ast_type_value || p->current->type == lang_ast_type_binop) {
 		lang_ast_node* target = _associated_expression(p->current, _node_precedence(binop));
-
 		binop->as_binop.left = lang_ast_replace(target, binop);
 		p->current = binop;
 	}
@@ -180,21 +181,16 @@ static void _lang_ast_begin_call(lang_parser* parser, lang_token const* where) {
 		p->current->type == lang_ast_type_binop ||
 		p->current->type == lang_ast_type_expression)
 	{
-		lang_ast_node* target = lang_ast_replace(
-			_associated_expression(p->current, _node_precedence(call)),
-			call
-		);
+		lang_ast_node* target = _associated_expression(p->current, _node_precedence(call));
+		lang_ast_replace(target, call);
 		lang_ast_append(call, &call->as_call.target, target);
 		p->current = call;
 	}
 }
 static void _lang_ast_next_call_argument(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-	p->current = _lang_ast_find(p->current, lang_ast_type_call);
-
-	lang_ast_node* arg = _new_node(p, lang_ast_type_expression);
-	lang_ast_append(p->current, &p->current->as_call.arguments, arg);
-	p->current = arg;
+	lang_ast_node* call = _lang_ast_find(p->current, lang_ast_type_call);
+	p->current = lang_ast_append(call, &call->as_call.arguments, _new_node(p, lang_ast_type_expression));
 }
 static void _lang_ast_end_call(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
@@ -210,34 +206,23 @@ static void _lang_ast_end_call(lang_parser* parser, lang_token const* where) {
 
 static void _lang_ast_value(lang_parser* parser, lang_token const* value) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
-	lang_ast_node* node = _new_node(p, lang_ast_type_value);
-	node->as_value.value = *value;
-
-	p->current = _append_value(p->current, node);
+	p->current = _append_value(p->current, _new_node(p, lang_ast_type_value));
+	p->current->as_value.value = *value;
 }
 
 
 static void _lang_ast_begin_function(lang_parser* parser, lang_token const* token) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
-	p->current = _append_value(
-		p->current,
-		_new_node(p, lang_ast_type_function)
-	);
+	p->current = _append_value(p->current, _new_node(p, lang_ast_type_function));
 }
 static void _lang_ast_add_func_argument(lang_parser* parser, lang_token const* name) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
 	assert(p->current->type == lang_ast_type_function);
-
-	lang_ast_node* arg = _new_node(p, lang_ast_type_declaration);
+	lang_ast_node* arg = lang_ast_append(p->current, &p->current->as_function.arguments, _new_node(p, lang_ast_type_declaration));
 	arg->as_declaration.name = *name;
-	lang_ast_append(p->current, &p->current->as_function.arguments, arg);
 }
 static void _lang_ast_end_function(lang_parser* parser, lang_token const* token) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
 	p->current = _parent_block(_lang_ast_find(p->current, lang_ast_type_function));
 }
 static void _lang_ast_next_statement(lang_parser* parser) {
@@ -250,21 +235,14 @@ static void _lang_ast_next_statement(lang_parser* parser) {
 
 static void _lang_ast_declare(lang_parser* parser, lang_token const* name) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
 	assert(_lang_is_block(p->current->type));
-
-	lang_ast_node* declaration = _new_node(p, lang_ast_type_declaration);
-	lang_ast_append(p->current, &p->current->as_block.content, declaration);
-	declaration->as_declaration.name = *name;
-
-	p->current = declaration;
+	p->current = lang_ast_append(p->current, &p->current->as_block.body, _new_node(p, lang_ast_type_declaration));
+	p->current->as_declaration.name = *name;
 }
 static void _lang_ast_init_declaration(lang_parser* parser) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
 	assert(_lang_is_block(p->current->type));
-
-	lang_ast_node* last = lang_ast_last(p->current->as_block.content);
+	lang_ast_node* last = lang_ast_last_sibling(p->current->as_block.body);
 	assert(last);
 	assert(last->type == lang_ast_type_declaration);
 	p->current = last;
@@ -272,15 +250,10 @@ static void _lang_ast_init_declaration(lang_parser* parser) {
 
 static void _lang_ast_begin_class(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
-	p->current = _append_value(
-		p->current,
-		_new_node(p, lang_ast_type_class)
-	);
+	p->current = _append_value(p->current, _new_node(p, lang_ast_type_class));
 }
 static void _lang_ast_end_class(lang_parser* parser, lang_token const* token) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
 	p->current = _parent_block(_lang_ast_find(p->current, lang_ast_type_class));
 }
 
@@ -288,31 +261,20 @@ static void _lang_ast_end_class(lang_parser* parser, lang_token const* token) {
 static void _lang_ast_if(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 	assert(_lang_is_block(p->current->type));
-	lang_ast_node* if_stmt = _new_node(p, lang_ast_type_if);
-	lang_ast_append(p->current, &p->current->as_block.content, if_stmt);
 
-	lang_ast_node* condition = _new_node(p, lang_ast_type_expression);
-	lang_ast_append(if_stmt, &if_stmt->as_if.condition, condition);
-
-	p->current = condition;
+	lang_ast_node* if_stmt = lang_ast_append(p->current, &p->current->as_block.body, _new_node(p, lang_ast_type_if));
+	p->current = lang_ast_append(if_stmt, &if_stmt->as_if.condition, _new_node(p, lang_ast_type_expression));
 }
 static void _lang_ast_if_body(lang_parser* parser) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
 
-	lang_ast_node* if_true = _new_node(p, lang_ast_type_block);
-
-	p->current = _lang_ast_find(p->current, lang_ast_type_if);
-	lang_ast_append(p->current, &p->current->as_if.if_true, if_true);
-	p->current = if_true;
+	lang_ast_node* if_stmt = _lang_ast_find(p->current, lang_ast_type_if);
+	p->current = lang_ast_append(if_stmt, &if_stmt->as_if.if_true, _new_node(p, lang_ast_type_block));
 }
 static void _lang_ast_else(lang_parser* parser, lang_token const* where) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
-
-	lang_ast_node* if_false = _new_node(p, lang_ast_type_block);
-
-	p->current = _lang_ast_find(p->current, lang_ast_type_if);
-	lang_ast_append(p->current, &p->current->as_if.if_false, if_false);
-	p->current = if_false;
+	lang_ast_node* if_stmt = _lang_ast_find(p->current, lang_ast_type_if);
+	p->current = lang_ast_append(if_stmt, &if_stmt->as_if.if_false, _new_node(p, lang_ast_type_block));
 }
 static void _lang_ast_end_if(lang_parser* parser) {
 	lang_ast_parser* p = (lang_ast_parser*)parser;
@@ -323,6 +285,61 @@ static void _lang_ast_end_if(lang_parser* parser) {
 	_simplify_block(p, if_stmt->as_if.if_false);
 
 	p->current = _parent_block(if_stmt);
+}
+
+static int _lang_ast_is_loop(lang_ast_type type) { return type == lang_ast_type_while || type == lang_ast_type_for || type == lang_ast_type_foreach; }
+static lang_ast_node* _lang_walk_up_to_loop(lang_ast_node* node) {
+	while(!_lang_ast_is_loop(node->type)) {
+		assert(node->parent);
+		node = node->parent;
+	}
+	return node;
+}
+
+static void _lang_ast_while(lang_parser* parser, lang_token const* where) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+
+	assert(_lang_is_block(p->current->type));
+	lang_ast_node* loop = lang_ast_append(p->current, &p->current->as_block.body,
+		_new_node(p, lang_ast_type_while)
+	);
+	p->current = lang_ast_append(loop, &loop->as_while.condition,
+		_new_node(p, lang_ast_type_expression)
+	);
+}
+static void _lang_ast_for(lang_parser* parser, lang_token const* where) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	lang_ast_node* loop = lang_ast_append(p->current, &p->current->as_block.body,
+		_new_node(p, lang_ast_type_for)
+	);
+	p->current = lang_ast_append(loop, &loop->as_for.arguments,
+		_new_node(p, lang_ast_type_block)
+	);
+}
+static void _lang_ast_foreach(lang_parser* parser, lang_token const* where) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	lang_ast_node* loop = lang_ast_append(p->current, &p->current->as_block.body,
+		_new_node(p, lang_ast_type_foreach)
+	);
+	p->current = lang_ast_append(loop, &loop->as_foreach.collection,
+		_new_node(p, lang_ast_type_block)
+	);
+}
+static void _lang_ast_foreach_variable(lang_parser* parser, lang_token const* name) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	lang_ast_node* loop = _lang_walk_up_to_loop(p->current);
+	assert(loop->type == lang_ast_type_foreach);
+	lang_ast_node* decomp = lang_ast_append(loop, &loop->as_foreach.decomposition, _new_node(p, lang_ast_type_declaration));
+	decomp->as_declaration.name = *name;
+}
+
+static void _lang_ast_loop_body(lang_parser* parser, lang_token const* where) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	p->current = _lang_walk_up_to_loop(p->current);
+}
+static void _lang_ast_end_loop(lang_parser* parser, lang_token const* where) {
+	lang_ast_parser* p = (lang_ast_parser*)parser;
+	p->current = _parent_block(_lang_walk_up_to_loop(p->current));
 }
 
 LANG_AST_API
@@ -357,6 +374,12 @@ lang_ast_parser lang_create_parser_ast(lang_alloc_callbacks alloc, unsigned lang
 	result.parser.pfnIfBody             = _lang_ast_if_body;
 	result.parser.pfnElse               = _lang_ast_else;
 	result.parser.pfnEndIf              = _lang_ast_end_if;
+	result.parser.pfnWhile              = _lang_ast_while;
+	result.parser.pfnFor                = _lang_ast_for;
+	result.parser.pfnForeach            = _lang_ast_foreach;
+	result.parser.pfnForeachVariable    = _lang_ast_foreach_variable;
+	result.parser.pfnLoopBody           = _lang_ast_loop_body;
+	result.parser.pfnEndLoop            = _lang_ast_end_loop;
 
 
 	result.root    = _new_node(&result, lang_ast_type_block);

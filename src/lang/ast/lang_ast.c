@@ -17,7 +17,7 @@ lang_ast_node** _lang_last_next_pointer(lang_ast_node** list) {
 	return result;
 }
 
-LANG_AST_API void lang_ast_append (lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement) {
+LANG_AST_API lang_ast_node* lang_ast_append (lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement) {
 	lang_ast_remove(newElement);
 
 	lang_ast_node** p = _lang_last_next_pointer(list);
@@ -26,8 +26,10 @@ LANG_AST_API void lang_ast_append (lang_ast_node* parent, lang_ast_node** list, 
 	newElement->next = NULL;
 
 	*newElement->self = newElement;
+
+	return newElement;
 }
-LANG_AST_API void lang_ast_prepend(lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement) {
+LANG_AST_API lang_ast_node* lang_ast_prepend(lang_ast_node* parent, lang_ast_node** list, lang_ast_node* newElement) {
 	assert(newElement);
 
 	lang_ast_remove(newElement);
@@ -40,6 +42,8 @@ LANG_AST_API void lang_ast_prepend(lang_ast_node* parent, lang_ast_node** list, 
 	if(newElement->next) {
 		newElement->next->self = &newElement->next;
 	}
+
+	return newElement;
 }
 LANG_AST_API void lang_insert_after(lang_ast_node* where, lang_ast_node* node) {
 	assert(where);
@@ -85,7 +89,7 @@ LANG_AST_API lang_ast_node* lang_ast_replace(lang_ast_node* target, lang_ast_nod
 	return target;
 }
 
-LANG_AST_API lang_ast_node* lang_ast_last(lang_ast_node* list) {
+LANG_AST_API lang_ast_node* lang_ast_last_sibling(lang_ast_node* list) {
 	if(!list) return NULL;
 
 	while(list->next) {

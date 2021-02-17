@@ -38,6 +38,7 @@ struct lang_tokenizer {
 	void* userdata;
 
 	void(*pfnNextToken)(lang_tokenizer* tokenizer);
+	void(*pfnRewind)(lang_tokenizer* tokenizer, lang_token const* token);
 
 	#ifdef __cplusplus
 	void next() noexcept { this->pfnNextToken(this); }

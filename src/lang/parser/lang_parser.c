@@ -42,8 +42,16 @@ lang_token _lang_next_token(lang_parser* parser, lang_tokenizer* tokens) {
 }
 
 static inline
-int _lang_next_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_token_type expected, const char* msg) {
-	_lang_next_token(parser, tokens);
+lang_token _lang_next_token_quiet(lang_tokenizer* tokens) {
+	tokens->pfnNextToken(tokens);
+	while(_lang_is_comment(&tokens->current)) {
+		tokens->pfnNextToken(tokens);
+	}
+	return tokens->current;
+}
+
+static inline
+int _lang_current_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_token_type expected, const char* msg) {
 	if(tokens->current.type != expected) {
 		_lang_parser_error(msg, parser, &tokens->current);
 	}
@@ -51,13 +59,17 @@ int _lang_next_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_to
 }
 
 static inline
-int _lang_skip_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_token_type expected, const char* msg) {
+int _lang_next_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_token_type expected, const char* msg) {
 	_lang_next_token(parser, tokens);
-	if(tokens->current.type != expected)
-		_lang_parser_error(msg, parser, &tokens->current);
-	else
-		_lang_next_token(parser, tokens);
-	return tokens->current.type == expected;
+	return _lang_current_token_expect(parser, tokens, expected, msg);
+}
+
+static inline
+int _lang_skip_token_expect(lang_parser* parser, lang_tokenizer* tokens, lang_token_type expected, const char* msg) {
+	if(!_lang_next_token_expect(parser, tokens, expected, msg))
+		return 0;
+	_lang_next_token(parser, tokens);
+	return 1;
 }
 
 static void _lang_parse_function(lang_parser* parser, lang_tokenizer* tokens);
@@ -294,6 +306,109 @@ void _lang_parse_declaration(lang_parser* parser, lang_tokenizer* tokens) {
 }
 
 static
+void _lang_parse_while(lang_parser* parser, lang_tokenizer* tokens) {
+	assert(tokens->current.type == lang_token_while);
+
+	parser->pfnWhile(parser, &tokens->current);
+	_lang_skip_token_expect(parser, tokens, lang_token_open_parenthesis, "Expected opening paranthesis after while keyword: while(<expression>)");
+	_lang_parse_expression(parser, tokens, 0);
+	if(_lang_current_token_expect(parser, tokens, lang_token_close_parenthesis, "No closing parenthesis ')' to while condition"))
+		_lang_next_token(parser, tokens);
+	parser->pfnLoopBody(parser, &tokens->current);
+	_lang_parse_statement(parser, tokens);
+	parser->pfnEndLoop(parser, &tokens->current);
+}
+
+static
+int _lang_is_foreach_loop(lang_tokenizer* tokens) {
+	lang_token start = tokens->current;
+
+	assert(tokens->current.type == lang_token_for);
+	printf("Is foreach loop %s:%i:%i?\n", tokens->current.file, tokens->current.line + 1, tokens->current.character + 1);
+
+	_lang_next_token_quiet(tokens);
+	if(tokens->current.type == lang_token_open_parenthesis)
+		_lang_next_token_quiet(tokens);
+
+	while(1) {
+		if(tokens->current.type != lang_token_name)
+			goto REGULAR_FOR_LOOP;
+
+		_lang_next_token_quiet(tokens);
+		if(tokens->current.type == lang_token_comma) {
+			_lang_next_token_quiet(tokens);
+			continue;
+		}
+		else if(tokens->current.type == lang_token_in)
+			goto FOREACH_LOOP;
+		else
+			goto REGULAR_FOR_LOOP;
+	}
+
+	FOREACH_LOOP:
+		puts("Yes");
+		tokens->pfnRewind(tokens, &start);
+		return 1;
+
+	REGULAR_FOR_LOOP:
+		puts("No");
+		tokens->pfnRewind(tokens, &start);
+		return 0;
+}
+
+static
+void _lang_parse_for(lang_parser* parser, lang_tokenizer* tokens) {
+	assert(tokens->current.type == lang_token_for);
+
+	int is_foreach = _lang_is_foreach_loop(tokens);
+	lang_token for_keyword = tokens->current;
+	_lang_skip_token_expect(parser, tokens, lang_token_open_parenthesis, "Expected for loop parameters to be enclosed in parantheses: for(<stuff...>)");
+
+	if(is_foreach) {
+		parser->pfnForeach(parser, &for_keyword);
+		while(1) {
+			if(tokens->current.type != lang_token_name) {
+				_lang_parser_error("Expected for each value name: 'for(<name> /*<- this*/ in <collection>)' or 'for(<name>, <name> /*<- this */ in <collection>)'", parser, &tokens->current);
+				// Try to recover from error
+				while(tokens->current.type != lang_token_close_parenthesis) {
+					if(tokens->current.type == lang_token_end_of_file) {
+						_lang_parser_error("Failed recovering from previous error: Expected a closing paranthesis ')' for the for loop somewhere, got end of file", parser, &tokens->current);
+						break;
+					}
+					_lang_next_token(parser, tokens);
+				}
+				break;
+			}
+			else {
+				parser->pfnForeachVariable(parser, &tokens->current);
+			}
+
+			_lang_next_token(parser, tokens);
+			if(tokens->current.type == lang_token_comma)
+				continue;
+			else if(tokens->current.type == lang_token_in)
+				break;
+		}
+
+		_lang_next_token(parser, tokens);
+		_lang_parse_expression(parser, tokens, 0);
+		_lang_skip_token_expect(parser, tokens, lang_token_close_parenthesis, "Expected closing paranthesis at end of foreach: for(x in collection) /* <- that */");
+	}
+	else {
+		parser->pfnFor(parser, &for_keyword);
+		_lang_parse_statement(parser, tokens);
+		_lang_parse_expression(parser, tokens, 0);
+		_lang_skip_token_expect(parser, tokens, lang_token_end_stmt, "Expected semicolon after for loop condition: for(<initialization>; <loop condition>; /* <- that */; <each iteration>)");
+		_lang_parse_expression(parser, tokens, 0);
+		_lang_skip_token_expect(parser, tokens, lang_token_open_parenthesis, "No closing parenthesis ')' to for parameters");
+	}
+
+	parser->pfnLoopBody(parser, &tokens->current);
+	_lang_parse_statement(parser, tokens);
+	parser->pfnEndLoop(parser, &tokens->current);
+}
+
+static
 void _lang_parse_if_else(lang_parser* parser, lang_tokenizer* tokens) {
 	assert(tokens->current.type == lang_token_if);
 
@@ -302,7 +417,8 @@ void _lang_parse_if_else(lang_parser* parser, lang_tokenizer* tokens) {
 	// Condition
 	_lang_skip_token_expect(parser, tokens, lang_token_open_parenthesis, "Expected opening paranthesis '(' after if");
 	_lang_parse_expression(parser, tokens, 0);
-	_lang_skip_token_expect(parser, tokens, lang_token_close_parenthesis, "Expected closing paranthesis ')' at the end of if condition");
+	_lang_current_token_expect(parser, tokens, lang_token_close_parenthesis, "Expected closing paranthesis ')' at the end of if condition");
+	_lang_next_token(parser, tokens);
 
 	// Body
 	parser->pfnIfBody(parser);
@@ -330,6 +446,12 @@ void _lang_parse_statement(lang_parser* parser, lang_tokenizer* tokens) {
 	}
 	else if(tokens->current.type == lang_token_if) {
 		_lang_parse_if_else(parser, tokens);
+	}
+	else if(tokens->current.type == lang_token_while) {
+		_lang_parse_while(parser, tokens);
+	}
+	else if(tokens->current.type == lang_token_for) {
+		_lang_parse_for(parser, tokens);
 	}
 	else if(tokens->current.type == lang_token_class) {
 		_lang_parse_class_definition(parser, tokens);

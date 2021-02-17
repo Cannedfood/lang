@@ -21,7 +21,7 @@ workspace 'lang'
 
 
 	project 'lang'
-		kind 'SharedLib'
+		kind 'StaticLib'
 		language 'C'
 		files 'src/lang/**'
 

@@ -18,3 +18,14 @@ else if(false)
 	print("Ho");
 else
 	print("Hi");
+
+while(true)
+	print("Hello");
+
+for(i in range(0, 32)) {
+
+}
+
+for(line in file.lines("whatever")) {
+
+}

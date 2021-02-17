@@ -3,15 +3,15 @@ LANG_AST_NODE(comment,
 )
 
 LANG_AST_NODE(block,
-	lang_ast_node* content;
+	lang_ast_node* body;
 )
 
 LANG_AST_NODE(class,
-	lang_ast_node* content; // block->content
+	lang_ast_node* body; // block->body
 )
 
 LANG_AST_NODE(function,
-	lang_ast_node* content; // block->content
+	lang_ast_node* body; // block->body
 	lang_ast_node* arguments; // Should all be variables
 )
 
@@ -22,14 +22,35 @@ LANG_AST_NODE(declaration,
 
 LANG_AST_NODE(if,
 	lang_ast_node* condition;
-	lang_ast_node* if_true;  // block->content
-	lang_ast_node* if_false; // block->content
+	lang_ast_node* if_true;
+	lang_ast_node* if_false;
 	lang_token where;
 )
 
+LANG_AST_NODE(loop, lang_ast_node* body;)
+
+	LANG_AST_NODE(foreach,
+		lang_ast_node* body; // block->body
+		lang_ast_node* decomposition;
+		lang_ast_node* collection;
+		lang_token     where;
+	)
+
+	LANG_AST_NODE(for,
+		lang_ast_node* body; // block->body
+		lang_ast_node* arguments;
+		lang_token where;
+	)
+
+	LANG_AST_NODE(while,
+		lang_ast_node* body; // block->body
+		lang_ast_node* condition;
+		lang_token     where;
+	)
+
 LANG_AST_NODE(expression,
 	lang_ast_node* children;
-	lang_token where;
+	lang_token     where;
 )
 
 LANG_AST_NODE(binop,

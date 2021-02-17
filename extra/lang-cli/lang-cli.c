@@ -30,6 +30,29 @@ lang_buffer readFile(const char* path) {
 void printAst(lang_ast_node* node, int indentN, int depth) {
 	while(node) {
 		switch (node->type) {
+		case lang_ast_type_loop:
+			printf("%*sloop (should be specialized as while, for or foreach!?)\n", depth, "");
+			break;
+		case lang_ast_type_while:
+			printf("%*swhile\n", depth, "");
+				printAst(node->as_while.condition, indentN, depth + indentN);
+			printf("%*sdo\n", depth, "");
+				printAst(node->as_while.body, indentN, depth + indentN);
+			break;
+		case lang_ast_type_for:
+			printf("%*sfor\n", depth, "");
+				printAst(node->as_for.arguments, indentN, depth + indentN);
+			printf("%*sdo\n", depth, "");
+				printAst(node->as_for.body, indentN, depth + indentN);
+			break;
+		case lang_ast_type_foreach:
+			printf("%*sfor each\n", depth, "");
+				printAst(node->as_foreach.decomposition, indentN, depth + indentN);
+			printf("%*sin\n", depth, "");
+				printAst(node->as_foreach.collection, indentN, depth + indentN);
+			printf("%*sdo\n", depth, "");
+				printAst(node->as_foreach.body, indentN, depth + indentN);
+			break;
 		case lang_ast_type_if:
 			printf("%*sif\n", depth, "");
 			printAst(node->as_if.condition, indentN, depth + indentN);
@@ -45,17 +68,17 @@ void printAst(lang_ast_node* node, int indentN, int depth) {
 		break;
 		case lang_ast_type_block:
 			printf("%*sblock\n", depth, "");
-			printAst(node->as_block.content, indentN, depth + indentN);
+			printAst(node->as_block.body, indentN, depth + indentN);
 		break;
 		case lang_ast_type_class:
 			printf("%*sclass\n", depth, "");
-			printAst(node->as_block.content, indentN, depth + indentN);
+			printAst(node->as_block.body, indentN, depth + indentN);
 		break;
 		case lang_ast_type_function:
 			printf("%*sfunction\n", depth, "");
 			printAst(node->as_function.arguments, indentN, depth + indentN);
 			printf("%*s body:\n", depth, "");
-			printAst(node->as_block.content, indentN, depth + indentN);
+			printAst(node->as_block.body, indentN, depth + indentN);
 		break;
 		case lang_ast_type_declaration:
 			printf("%*sdef %.*s\n", depth, "", node->as_declaration.name.length, node->as_declaration.name.text);
@@ -120,10 +143,10 @@ void parseFile(const char* filepath) {
 	lang_tokenizer  tokenizer = lang_tokenizer_create(fileContents.data, fileContents.length, filepath);
 
 	lang_alloc_callbacks alloc  = lang_alloc_callbacks_for(allocator);
-	lang_ast_parser      parser = lang_create_parser_ast(alloc, 0);
+	lang_ast_parser      parser = lang_create_parser_ast(alloc, lang_ast_parser_flag_print_errors);
 	lang_parser_parse(&parser.parser, &tokenizer);
 
-	printAst(parser.root->as_block.content, 4, 0);
+	printAst(parser.root->as_block.body, 4, 0);
 
 	lang_free_allocator(allocator);
 

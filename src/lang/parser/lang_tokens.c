@@ -177,10 +177,12 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	else KEYWORD("pub",   lang_token_pub)
 	else KEYWORD("get",   lang_token_get)
 	else KEYWORD("set",   lang_token_set)
-	else KEYWORD("new",   lang_token_new)
 
 	else KEYWORD("if",    lang_token_if)
 	else KEYWORD("else",  lang_token_else)
+	else KEYWORD("while", lang_token_while)
+	else KEYWORD("for",   lang_token_for)
+	else KEYWORD("in",    lang_token_in)
 
 	else KEYWORD("true",  lang_token_true)
 	else KEYWORD("false", lang_token_false)
@@ -217,6 +219,12 @@ void _lang_tokenizer_next_token(lang_tokenizer* userdata) {
 	// );
 }
 
+static
+void _lang_tokenizer_rewind(lang_tokenizer* tokenizer, lang_token const* to) {
+	tokenizer->current = *to;
+}
+
+
 LANG_TOKENIZER_API
 lang_tokenizer lang_tokenizer_create(
 	const char* text,
@@ -240,6 +248,7 @@ lang_tokenizer lang_tokenizer_create(
 	stream.userdata = (void*)(text + length);
 
 	stream.pfnNextToken = &_lang_tokenizer_next_token;
+	stream.pfnRewind = &_lang_tokenizer_rewind;
 
 	return stream;
 }
